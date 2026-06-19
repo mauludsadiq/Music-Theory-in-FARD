@@ -90,7 +90,7 @@ test "detect_cadence returns none for non-cadential ending" {
 }
 
 let ddom7 = chord.make(d4, "Dominant7", 0, "close")
-let aatdom = chord.make(a4, "Dominant7", 0, "close")
+let eDom7 = chord.make(e4, "Dominant7", 0, "close")
 
 test "detect_secondary_dominants finds V/V resolving to V" {
   let states = [progression.state("I", cmaj, 1), progression.state("V/V", ddom7, 1), progression.state("V", gmaj, 1)]
@@ -100,7 +100,7 @@ test "detect_secondary_dominants finds V/V resolving to V" {
 }
 
 test "detect_secondary_dominants finds V/vi resolving to vi" {
-  let states = [progression.state("I", cmaj, 1), progression.state("V/vi", aatdom, 1), progression.state("vi", amin, 1)]
+  let states = [progression.state("I", cmaj, 1), progression.state("V/vi", eDom7, 1), progression.state("vi", amin, 1)]
   let p = progression.make("I V/vi vi", key, states, null)
   let secondaries = progression.detect_secondary_dominants(key, p)
   list.len(secondaries) == 1 && secondaries[0].index == 1 && secondaries[0].target == "vi"

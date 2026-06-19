@@ -55,6 +55,29 @@ fn detect_cadence(key_scale, p) {
   if last_numeral == "V" then "half" else
   "none"
 }
+
+fn normalize_degree_diff(d) { if d < 0 then d + 7 else d }
+fn is_fifth_above(curr_digest, next_digest, key_scale) {
+  let curr_idx = list.find_index(key_scale.note_digests, fn(d) { d == curr_digest }) in
+  let next_idx = list.find_index(key_scale.note_digests, fn(d) { d == next_digest }) in
+  if curr_idx < 0 || next_idx < 0 then false else
+  normalize_degree_diff(curr_idx - next_idx) == 4
+}
+
+fn detect_secondary_dominants(key_scale, p) {
+  let n = list.len(p.states) in
+  if n < 2 then [] else
+  let tonic_digest = key_scale.note_digests[0] in
+  let candidates = list.range(0, n - 1) in
+  let flagged = list.filter(candidates, fn(i) {
+    let curr = p.states[i] in
+    let nxt = p.states[i + 1] in
+    curr.chord_quality == "Dominant7" &&
+    nxt.root_digest != tonic_digest &&
+    is_fifth_above(curr.root_digest, nxt.root_digest, key_scale)
+  }) in
+  list.map(flagged, fn(i) { { index: i, target: numeral_for_state(key_scale, p.states[i + 1]) } })
+}
 fn make(name, key_scale, states, melody_context) {
   {
     layer: layer_name,
@@ -84,4 +107,4 @@ fn certify(p) { canon.certify(layer_name, schema_name, rules_name, canon.digest_
 fn digest(p) { certify(p).object_digest }
 fn universe_digest() { canon.layer_digest(layer_name, canon.digest_value([chord.universe_digest(), scale.universe_digest(), melody.universe_digest()]), canon.digest_text(schema_name), canon.digest_text(rules_name), canon.digest_text("progression-sequence-rules")) }
 
-export { state, make, validate, certify, digest, universe_digest, roman_numeral, detect_cadence }
+export { state, make, validate, certify, digest, universe_digest, roman_numeral, detect_cadence, detect_secondary_dominants }
