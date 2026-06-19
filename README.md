@@ -29,26 +29,43 @@ The implementation is intentionally data-first. Each layer exposes constructors,
 ```text
 src/core/canon.fard          canonical JSON/bytes/hash/cert helpers
 src/core/validate.fard       shared result and validation helpers
-src/layers/note.fard         Layer 1
-src/layers/interval.fard     Layer 2
-src/layers/chord.fard        Layer 3
-src/layers/scale.fard        Layer 4
-src/layers/rhythm.fard       Layer 5
-src/layers/melody.fard       Layer 6
-src/layers/progression.fard  Layer 7
-src/layers/piece.fard        Layer 8
+src/layers/note.fard         Layer 1 -- pitch, frequency, register, transpose
+src/layers/interval.fard     Layer 2 -- quality, consonance, inversion
+src/layers/chord.fard        Layer 3 -- qualities, voicings, inversions
+src/layers/scale.fard        Layer 4 -- modes, traditions, temperament labeling
+src/layers/rhythm.fard       Layer 5 -- duration, meter, syncopation
+src/layers/melody.fard       Layer 6 -- note events, contour, motive windows, interval chains
+src/layers/progression.fard  Layer 7 -- harmonic states, root motion
+src/layers/piece.fard        Layer 8 -- sections, instrumentation, form analysis
 src/tower.fard               full digest tower and exports
-tests/*.fard                 executable layer tests
+tests/test_*.fard            layer-spec and tower-behavior tests
+tests/diagnostics/diag_*.fard  meta-property audit probes (determinism, inversion sanity, validation bypass resistance, labeling honesty)
 ```
 
 ## Run
 
-From this directory:
+From this directory.
+
+Run the test suite (pass/fail per assertion):
+
+```sh
+fardrun test --program tests/test_tower.fard
+fardrun test --program tests/test_negative.fard
+fardrun test --program tests/test_melody.fard
+```
+
+Run a program and capture its digest, trace, and module graph:
 
 ```sh
 fardrun run --program tests/test_tower.fard --out out/music_theory_tower
 ```
 
+This writes result.json, digests.json, trace.ndjson, and module_graph.json to the output directory. digests.json records the SHA-256 of every output file plus the runtime version and stdlib root digest, so a run's provenance can be independently verified with fardrun verify --out <dir>.
+
 ## Design invariant
 
 A higher layer never invents lower-layer truth. It only commits to certified objects already validated beneath it.
+
+## Testing discipline
+
+New layer behavior is specified as a failing test suite before it is implemented. tests/test_<layer>.fard defines the contract; src/layers/<layer>.fard is then built incrementally until every test passes. tests/diagnostics/ holds a separate audit suite that probes the system's meta-properties -- determinism across reruns, interval inversion correctness, validation reachability on malformed input, and honesty of tradition/temperament labeling -- rather than layer-specific musical behavior.
