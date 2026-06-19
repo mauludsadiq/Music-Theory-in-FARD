@@ -1,0 +1,46 @@
+import("../../src/layers/note") as note
+import("../../src/layers/interval") as interval
+
+// Diagnostic: interval inversion sanity.
+// Confirms interval.invert() produces musically correct inversion pairs:
+// unison<->unison, P5<->P4, M3<->m6, M2<->m7, M7<->m2.
+
+let c4 = note.make("C", 4, 0.0, "12-TET-A440")
+let c5 = note.make("C", 5, 0.0, "12-TET-A440")
+let g4 = note.make("G", 4, 0.0, "12-TET-A440")
+let e4 = note.make("E", 4, 0.0, "12-TET-A440")
+let d4 = note.make("D", 4, 0.0, "12-TET-A440")
+let b4 = note.make("B", 4, 0.0, "12-TET-A440")
+
+let unison = interval.make(c4, c5)
+let unison_inv = interval.invert(unison)
+let p5 = interval.make(c4, g4)
+let p5_inv = interval.invert(p5)
+let m3 = interval.make(c4, e4)
+let m3_inv = interval.invert(m3)
+let maj2 = interval.make(c4, d4)
+let maj2_inv = interval.invert(maj2)
+let maj7 = interval.make(c4, b4)
+let maj7_inv = interval.invert(maj7)
+
+test "unison inverts to unison" {
+  unison.quality == "Perfect Unison" && unison_inv.quality == "Perfect Unison"
+}
+
+test "perfect fifth inverts to perfect fourth" {
+  p5.quality == "Perfect Fifth" && p5_inv.quality == "Perfect Fourth"
+}
+
+test "major third inverts to minor sixth" {
+  m3.quality == "Major Third" && m3_inv.quality == "Minor Sixth"
+}
+
+test "major second inverts to minor seventh" {
+  maj2.quality == "Major Second" && maj2_inv.quality == "Minor Seventh"
+}
+
+test "major seventh inverts to minor second" {
+  maj7.quality == "Major Seventh" && maj7_inv.quality == "Minor Second"
+}
+
+true

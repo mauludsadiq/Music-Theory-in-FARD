@@ -1,7 +1,0 @@
-import("../src/layers/note") as note
-import("../src/layers/interval") as interval
-let c4 = note.make("C", 4, 0.0, "12-TET-A440")
-let c5 = note.make("C", 5, 0.0, "12-TET-A440")
-let iv = interval.make(c4, c5)
-let inv = interval.invert(iv)
-{ original: iv.quality, original_simple: iv.simple_semitones, inverted: inv.quality, inverted_simple: inv.simple_semitones }

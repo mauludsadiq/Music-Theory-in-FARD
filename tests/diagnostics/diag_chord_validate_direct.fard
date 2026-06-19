@@ -1,5 +1,5 @@
-import("../src/layers/chord") as chord
-import("../src/core/validate") as v
+import("../../src/layers/chord") as chord
+import("../../src/core/validate") as v
 
 test "hand-built bad chord rejected at root check" {
   let bad = {
