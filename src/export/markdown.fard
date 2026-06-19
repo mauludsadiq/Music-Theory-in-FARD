@@ -25,13 +25,24 @@ fn student_summary(piece, analysis, key_scale) {
   str.join([key_sentence(rep), cadence_sentence(rep), motive_sentence(rep), form_sentence(rep)], " ")
 }
 
+fn motive_report_lines(rep) {
+  str.concat([
+    "**Motives**\n\n",
+    "- motive windows: ", str.from(rep.motives.window_count), "\n",
+    "- repeated motive classes: ", str.from(rep.motives.repeated_classes), "\n",
+    "- strongest repeated motive: appears ", str.from(rep.motives.strongest_motive_count), " times\n",
+    "- sections containing repeats: ", str.join(rep.motives.sections_with_repeats, ", "), "\n"
+  ])
+}
+
 fn professor_summary(piece, analysis, key_scale) {
   let rep = report.analysis_report(piece, analysis, key_scale) in
   str.concat([
     "# ", rep.title, "\n\n",
     "**Key:** ", rep.key.tonic, " ", rep.key.mode, "\n\n",
     "**Terminal cadence:** ", rep.terminal_cadence, "\n\n",
-    "**Form:** ", str.join(rep.form, "-"), "\n"
+    "**Form:** ", str.join(rep.form, "-"), "\n\n",
+    motive_report_lines(rep)
   ])
 }
 

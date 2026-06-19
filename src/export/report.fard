@@ -16,6 +16,26 @@ fn top_repeated_motive(analysis) {
   list.last(list.sort_by_int_key(list.map(reps, fn(r) { { k: r.count, v: r } }), fn(x) { x.k })).v
 }
 
+fn sections_with_repeats(analysis) {
+  let by_section = analysis.motives.by_section in
+  let repeated_digests = list.map(analysis.motives.repeated, fn(r) { r.digest }) in
+  list.filter(rec.keys(by_section), fn(label) {
+    let motives_here = rec.get(by_section, label) in
+    list.any(motives_here, fn(m) { list.any(repeated_digests, fn(d) { d == m.digest }) })
+  })
+}
+
+fn motive_summary(analysis) {
+  let reps = analysis.motives.repeated in
+  let strongest = top_repeated_motive(analysis) in
+  {
+    window_count: list.len(analysis.motives.items),
+    repeated_classes: list.len(reps),
+    strongest_motive_count: if strongest == null then 0 else strongest.count,
+    sections_with_repeats: sections_with_repeats(analysis)
+  }
+}
+
 fn form_summary(piece) { piece.sections }
 
 fn analysis_report(piece, analysis, key_scale) {
@@ -24,9 +44,10 @@ fn analysis_report(piece, analysis, key_scale) {
     key: key_summary(piece, key_scale),
     terminal_cadence: cadence_summary(analysis),
     top_motive: top_repeated_motive(analysis),
+    motives: motive_summary(analysis),
     form: list.map(piece.sections, fn(s) { s.label }),
     harmony_histogram: analysis.style.harmony
   }
 }
 
-export { analysis_report, key_summary, cadence_summary, top_repeated_motive, form_summary }
+export { analysis_report, key_summary, cadence_summary, top_repeated_motive, motive_summary, form_summary }

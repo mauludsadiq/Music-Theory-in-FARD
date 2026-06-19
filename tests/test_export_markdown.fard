@@ -1,0 +1,22 @@
+import("std/str") as str
+import("../corpus/bach_minuet_g") as bach
+import("../src/analysis/engine") as engine
+import("../src/export/markdown") as markdown
+import("../src/export/report") as report
+
+let analysis = engine.analyze_piece(bach.key, bach.pc, [bach.phrase_a, bach.phrase_b], [bach.prog], [])
+
+test "motive_summary reports correct window and repeated class counts for Bach Minuet" {
+  let summary = report.motive_summary(analysis)
+  summary.window_count == 12 && summary.repeated_classes == 5 && summary.strongest_motive_count == 2
+}
+
+test "motive_summary identifies both sections as containing repeats" {
+  let summary = report.motive_summary(analysis)
+  str.contains(str.join(summary.sections_with_repeats, ","), "A") && str.contains(str.join(summary.sections_with_repeats, ","), "B")
+}
+
+test "professor_summary produces non-empty markdown with motive section" {
+  let md = markdown.professor_summary(bach.pc, analysis, bach.key)
+  str.contains(md, "**Motives**") && str.contains(md, "repeated motive classes")
+}
