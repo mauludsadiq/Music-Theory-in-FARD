@@ -1,0 +1,25 @@
+import("std/list") as list
+import("../corpus/twinkle") as twinkle
+import("../src/layers/piece") as piece
+import("../src/analysis/engine") as engine
+import("../src/query/search") as search
+import("../src/core/validate") as v
+
+test "twinkle piece validates" {
+  v.is_ok(piece.validate(twinkle.pc))
+}
+
+test "twinkle has no exact-pitch repeated motives at window size 3 (correct: melody varies pitch per phrase)" {
+  let analysis = engine.analyze_piece(twinkle.key, twinkle.pc, [twinkle.phrase_a, twinkle.phrase_b], [twinkle.prog], [])
+  list.len(analysis.motives.repeated) == 0
+}
+
+test "twinkle ends on an authentic cadence" {
+  let analysis = engine.analyze_piece(twinkle.key, twinkle.pc, [twinkle.phrase_a, twinkle.phrase_b], [twinkle.prog], [])
+  let terminal = search.find_terminal_cadences(analysis, "authentic")
+  list.len(terminal) >= 1
+}
+
+test "twinkle form is A B" {
+  twinkle.pc.sections[0].label == "A" && twinkle.pc.sections[1].label == "B"
+}

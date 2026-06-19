@@ -1,0 +1,71 @@
+import("../src/layers/note") as note
+import("../src/layers/chord") as chord
+import("../src/layers/scale") as scale
+import("../src/layers/rhythm") as rhythm
+import("../src/layers/melody") as melody
+import("../src/layers/progression") as progression
+import("../src/layers/piece") as piece
+
+let c4 = note.make("C", 4, 0.0, "12-TET-A440")
+let d4 = note.make("D", 4, 0.0, "12-TET-A440")
+let e4 = note.make("E", 4, 0.0, "12-TET-A440")
+let f4 = note.make("F", 4, 0.0, "12-TET-A440")
+let g4 = note.make("G", 4, 0.0, "12-TET-A440")
+let a4 = note.make("A", 4, 0.0, "12-TET-A440")
+
+let key = scale.make(c4, "Major", "Western")
+let q = rhythm.duration("quarter", 1, 4, 0)
+
+let phrase_a_notes = [c4, c4, g4, g4, a4, a4, g4]
+let phrase_a_durations = [q, q, q, q, q, q, q]
+let phrase_a_meter = rhythm.meter(7, 4, [1,1,1,1,1,1,1])
+let phrase_a_rhythm = rhythm.pattern("twinkle-a", phrase_a_meter, [
+  rhythm.event("note", q, 0), rhythm.event("note", q, 1), rhythm.event("note", q, 2),
+  rhythm.event("note", q, 3), rhythm.event("note", q, 4), rhythm.event("note", q, 5),
+  rhythm.event("note", q, 6)
+])
+let phrase_a = melody.make("twinkle-phrase-a", phrase_a_notes, phrase_a_durations, key, phrase_a_rhythm, null)
+
+let phrase_b_notes = [f4, f4, e4, e4, d4, d4, c4]
+let phrase_b_durations = [q, q, q, q, q, q, q]
+let phrase_b_meter = rhythm.meter(7, 4, [1,1,1,1,1,1,1])
+let phrase_b_rhythm = rhythm.pattern("twinkle-b", phrase_b_meter, [
+  rhythm.event("note", q, 0), rhythm.event("note", q, 1), rhythm.event("note", q, 2),
+  rhythm.event("note", q, 3), rhythm.event("note", q, 4), rhythm.event("note", q, 5),
+  rhythm.event("note", q, 6)
+])
+let phrase_b = melody.make("twinkle-phrase-b", phrase_b_notes, phrase_b_durations, key, phrase_b_rhythm, null)
+
+let cmaj = chord.make(c4, "Major", 0, "close")
+let gmaj = chord.make(g4, "Major", 0, "close")
+let fmaj = chord.make(f4, "Major", 0, "close")
+
+let prog = progression.make("I V I IV I V I", key,
+  [
+    progression.state("I", cmaj, 2),
+    progression.state("V", gmaj, 2),
+    progression.state("I", cmaj, 1),
+    progression.state("IV", fmaj, 2),
+    progression.state("I", cmaj, 2),
+    progression.state("V", gmaj, 1),
+    progression.state("I", cmaj, 1)
+  ],
+  phrase_a)
+
+let sec_a = piece.make_section("A", 0, 7, [0], [0], [0])
+let sec_b = piece.make_section("B", 7, 14, [1], [0], [1])
+
+let pc = piece.make(
+  "Twinkle Twinkle Little Star",
+  "binary",
+  "homophonic",
+  "folk",
+  "traditional",
+  ["voice", "piano"],
+  [phrase_a, phrase_b],
+  [prog],
+  [phrase_a_rhythm, phrase_b_rhythm],
+  [sec_a, sec_b]
+)
+
+export { key, phrase_a, phrase_b, prog, pc }
