@@ -59,13 +59,13 @@ test "contour mixed melody produces exact sequence" {
 
 test "motive window size 2 extracts adjacent pairs" {
   let evs = melody.note_events([c4, d4, e4, c4], [q, q, q, q])
-  let windows = melody.motive_windows(evs, 2)
+  let windows = melody.motive_windows(evs, 2)?
   list.len(windows) == 3 && list.len(windows[0]) == 2
 }
 
 test "motive window size 3 extracts triads of motion" {
   let evs = melody.note_events([c4, d4, e4, c4], [q, q, q, q])
-  let windows = melody.motive_windows(evs, 3)
+  let windows = melody.motive_windows(evs, 3)?
   list.len(windows) == 2 && list.len(windows[0]) == 3
 }
 

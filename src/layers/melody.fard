@@ -5,6 +5,7 @@ import("./note") as note
 import("./scale") as scale
 import("./rhythm") as rhythm
 import("./chord") as chord
+import("./interval") as interval
 
 let layer_name = "MELODY"
 let schema_name = "MelodyPhraseRecord"
@@ -14,6 +15,57 @@ fn signed_step(a, b) { b.midi_note - a.midi_note }
 fn contour(notes) { list.map(list.range(1, list.len(notes)), fn(i) { let d = signed_step(notes[i - 1], notes[i]) in if d > 0 then "up" else if d < 0 then "down" else "same" }) }
 fn range_semitones(notes) { let mids = list.map(notes, fn(n) { n.midi_note }) in list.last(list.sort_int(mids)) - list.head(list.sort_int(mids)) }
 fn event(n, d) { { note: n.name, note_digest: note.digest(n), duration: d, duration_digest: canon.digest_value(d) } }
+
+fn note_event(n, d, onset) { { note: n.name, note_digest: note.digest(n), pitch: n, duration: d, duration_digest: canon.digest_value(d), onset: onset } }
+
+fn validate_note_event(ne) {
+  if v.is_err(note.validate(ne.pitch)) then v.err("NOTE_EVENT_BAD_NOTE", ne.pitch) else
+  if v.is_err(rhythm.validate_duration(ne.duration)) then v.err("NOTE_EVENT_BAD_DURATION", ne.duration) else
+  if ne.onset < 0 then v.err("NOTE_EVENT_BAD_ONSET", ne.onset) else
+  v.ok(ne)
+}
+
+fn note_events(notes, durations) { list.map(list.range(0, list.len(notes)), fn(i) { note_event(notes[i], durations[i], i) }) }
+
+fn validate_window_size(events, window_size) {
+  if window_size <= 0 then v.err("WINDOW_SIZE_NOT_POSITIVE", window_size) else
+  if window_size > list.len(events) then v.err("WINDOW_SIZE_EXCEEDS_EVENTS", window_size) else
+  v.ok(window_size)
+}
+
+fn motive_windows(events, window_size) {
+  let check = validate_window_size(events, window_size) in
+  if v.is_err(check) then check else
+  let n = list.len(events) in
+  let count = n - window_size + 1 in
+  v.ok(list.map(list.range(0, count), fn(i) { list.map(list.range(0, window_size), fn(j) { events[i + j] }) }))
+}
+
+fn duration_beats(d) { (d.numerator * 4) / d.denominator }
+fn total_duration(durations) { list.fold(durations, 0, fn(acc, d) { acc + duration_beats(d) }) }
+fn interval_chain(notes) { list.map(list.range(1, list.len(notes)), fn(i) { interval.make(notes[i - 1], notes[i]) }) }
+
+fn make_from_pairs(name, pairs, scale_record, chord_context) {
+  let notes = list.map(pairs, fn(p) { p[0] }) in
+  let durations = list.map(pairs, fn(p) { p[1] }) in
+  let evs = note_events(notes, durations) in
+  {
+    layer: layer_name,
+    name: name,
+    events: evs,
+    length: list.len(evs),
+    note_digests: list.map(notes, fn(n) { note.digest(n) }),
+    scale_digest: scale.digest(scale_record),
+    total_duration: total_duration(durations),
+    interval_chain: interval_chain(notes),
+    chord_digest: if chord_context == null then null else chord.digest(chord_context),
+    contour: contour(notes),
+    range_semitones: range_semitones(notes),
+    motives: [],
+    cadences: [],
+    phrase_structure: "single-phrase"
+  }
+}
 fn make(name, notes, durations, scale_record, rhythm_record, chord_context) {
   let evs = list.map(list.range(0, list.len(notes)), fn(i) { event(notes[i], durations[i]) }) in
   {
@@ -46,4 +98,4 @@ fn certify(m) { canon.certify(layer_name, schema_name, rules_name, canon.digest_
 fn digest(m) { certify(m).object_digest }
 fn universe_digest() { canon.layer_digest(layer_name, canon.digest_value([note.universe_digest(), scale.universe_digest(), rhythm.universe_digest(), chord.universe_digest()]), canon.digest_text(schema_name), canon.digest_text(rules_name), canon.digest_text("melody-sequence-rules")) }
 
-export { event, make, validate, certify, digest, universe_digest, contour, range_semitones }
+export { event, note_event, validate_note_event, note_events, validate_window_size, motive_windows, make, make_from_pairs, validate, certify, digest, universe_digest, contour, range_semitones }
