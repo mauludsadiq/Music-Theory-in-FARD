@@ -1,0 +1,18 @@
+import("std/list") as list
+import("../corpus/greensleeves") as greensleeves
+import("../src/layers/piece") as piece
+import("../src/analysis/engine") as engine
+import("../src/core/validate") as v
+
+test "greensleeves piece validates" {
+  v.is_ok(piece.validate(greensleeves.pc))
+}
+
+test "greensleeves form is A B" {
+  greensleeves.pc.sections[0].label == "A" && greensleeves.pc.sections[1].label == "B"
+}
+
+test "greensleeves analysis runs without error on a Dorian key" {
+  let analysis = engine.analyze_piece(greensleeves.key, greensleeves.pc, [greensleeves.phrase_a, greensleeves.phrase_b], [greensleeves.prog], [])
+  analysis.piece_digest != null
+}
