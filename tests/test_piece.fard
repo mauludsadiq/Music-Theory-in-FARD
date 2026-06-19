@@ -89,11 +89,20 @@ test "form_fingerprint_digest is identical for identical section sequences" {
   fp1 == fp2
 }
 
-test "form_fingerprint_digest changes when section order changes" {
+test "form_fingerprint_digest is stable under unsorted section input" {
   let sec_a = piece.make_section("A", 0, 4, [0], [0], [0])
   let sec_b = piece.make_section("B", 4, 8, [0], [0], [0])
   let fp1 = piece.form_fingerprint_digest([sec_a, sec_b])
   let fp2 = piece.form_fingerprint_digest([sec_b, sec_a])
+  fp1 == fp2
+}
+
+test "form_fingerprint_digest changes when chronological form changes" {
+  let sec_a = piece.make_section("A", 0, 4, [0], [0], [0])
+  let sec_b = piece.make_section("B", 4, 8, [0], [0], [0])
+  let sec_c = piece.make_section("C", 8, 12, [0], [0], [0])
+  let fp1 = piece.form_fingerprint_digest([sec_a, sec_b])
+  let fp2 = piece.form_fingerprint_digest([sec_a, sec_c])
   fp1 != fp2
 }
 

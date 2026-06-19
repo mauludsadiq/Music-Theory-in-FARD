@@ -1,4 +1,5 @@
 import("std/list") as list
+import("std/rec") as rec
 import("../core/canon") as canon
 import("../core/validate") as v
 import("./note") as note
@@ -12,6 +13,51 @@ import("./progression") as progression
 let layer_name = "PIECE"
 let schema_name = "PieceMovementRecord"
 let rules_name = "PieceMovementValidationRules"
+
+fn make_section(label, start_beat, end_beat, melody_indices, progression_indices, rhythm_indices) {
+  { label: label, start_beat: start_beat, end_beat: end_beat, melody_indices: melody_indices, progression_indices: progression_indices, rhythm_indices: rhythm_indices }
+}
+
+fn validate_section(sec) {
+  if sec.start_beat < 0 then v.err("SECTION_NEGATIVE_START", sec.start_beat) else
+  if sec.end_beat <= sec.start_beat then v.err("SECTION_END_NOT_AFTER_START", sec) else
+  v.ok(sec)
+}
+
+fn index_in_range(i, n) { i >= 0 && i < n }
+
+fn section_indices_valid(s, n_melodies, n_progressions, n_rhythms) {
+  list.all(s.melody_indices, fn(i) { index_in_range(i, n_melodies) }) && list.all(s.progression_indices, fn(i) { index_in_range(i, n_progressions) }) && list.all(s.rhythm_indices, fn(i) { index_in_range(i, n_rhythms) })
+}
+
+fn validate_sections_against_materials(sections, melodies, progressions, rhythms) {
+  let n_mel = list.len(melodies) in
+  let n_prog = list.len(progressions) in
+  let n_rhy = list.len(rhythms) in
+  let bad = list.find(sections, fn(s) { !section_indices_valid(s, n_mel, n_prog, n_rhy) }) in
+  if rec.has(bad, "some") then v.err("SECTION_MATERIAL_INDEX_OUT_OF_RANGE", bad.some) else v.ok(sections)
+}
+
+fn timeline_key(s) { { k: s.start_beat, v: s } }
+fn timeline(sections) { list.map(list.sort_by_int_key(list.map(sections, timeline_key), fn(r) { r.k }), fn(r) { r.v }) }
+fn timeline_total_beats(sections) {
+  let ordered = timeline(sections) in
+  if list.len(ordered) == 0 then 0 else list.last(ordered).end_beat - list.head(ordered).start_beat
+}
+
+fn sections_overlap(a, b) { a.start_beat < b.end_beat && b.start_beat < a.end_beat }
+
+fn validate_timeline(sections) {
+  let ordered = timeline(sections) in
+  let n = list.len(ordered) in
+  if n < 2 then v.ok(ordered) else
+  let bad_pair = list.find(list.range(0, n - 1), fn(i) { sections_overlap(ordered[i], ordered[i + 1]) }) in
+  if rec.has(bad_pair, "some") then v.err("TIMELINE_OVERLAPPING_SECTIONS", { a: ordered[bad_pair.some].label, b: ordered[bad_pair.some + 1].label }) else
+  v.ok(ordered)
+}
+
+fn form_fingerprint(sections) { list.map(timeline(sections), fn(s) { s.label }) }
+fn form_fingerprint_digest(sections) { canon.digest_value(form_fingerprint(sections)) }
 
 fn make(title, form, texture, style, era, instrumentation, melodies, progressions, rhythms, sections) {
   {
@@ -45,4 +91,4 @@ fn certify(piece) { canon.certify(layer_name, schema_name, rules_name, lower_dig
 fn digest(piece) { certify(piece).object_digest }
 fn universe_digest() { canon.layer_digest(layer_name, lower_digest(), canon.digest_text(schema_name), canon.digest_text(rules_name), canon.digest_text("piece-movement-rules")) }
 
-export { make, validate, certify, digest, universe_digest, lower_digest }
+export { make, make_section, validate_section, validate_sections_against_materials, timeline, timeline_total_beats, validate_timeline, form_fingerprint, form_fingerprint_digest, validate, certify, digest, universe_digest, lower_digest }
