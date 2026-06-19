@@ -1,6 +1,32 @@
 import("std/list") as list
+import("std/rec") as rec
 import("../core/validate") as v
+import("std/type") as type
 
-fn find_cadences(analysis, kind) { [] }
+fn find_cadences(analysis, kind) {
+  list.filter(analysis.cadences.items, fn(c) { c.kind == kind })
+}
 
-export { find_cadences }
+fn find_terminal_cadences(analysis, kind) {
+  list.filter(analysis.cadences.terminal, fn(c) { c.kind == kind })
+}
+
+fn find_motives_by_digest(analysis, digest) {
+  list.filter(analysis.motives.items, fn(m) { m.digest == digest })
+}
+
+fn find_motives_in_section(analysis, label) {
+  rec.getOr(analysis.motives.by_section, label, [])
+}
+
+fn find_repeated_motives(analysis) {
+  analysis.motives.repeated
+}
+
+fn find_style_value(analysis, domain, key) {
+  let dom = rec.get(analysis.style, domain) in
+  if type.of(dom) != "record" then v.err("QUERY_STYLE_DOMAIN_NOT_RECORD", domain) else
+  v.ok(rec.get(dom, key))
+}
+
+export { find_cadences, find_terminal_cadences, find_motives_by_digest, find_motives_in_section, find_repeated_motives, find_style_value }
