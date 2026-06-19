@@ -1,0 +1,32 @@
+import("std/list") as list
+import("std/rec") as rec
+
+fn key_summary(piece, key_scale) {
+  { tonic: key_scale.tonic, mode: key_scale.name }
+}
+
+fn cadence_summary(analysis) {
+  let terminal = analysis.cadences.terminal in
+  if list.len(terminal) == 0 then "none" else list.last(terminal).kind
+}
+
+fn top_repeated_motive(analysis) {
+  let reps = analysis.motives.repeated in
+  if list.len(reps) == 0 then null else
+  list.last(list.sort_by_int_key(list.map(reps, fn(r) { { k: r.count, v: r } }), fn(x) { x.k })).v
+}
+
+fn form_summary(piece) { piece.sections }
+
+fn analysis_report(piece, analysis, key_scale) {
+  {
+    title: piece.title,
+    key: key_summary(piece, key_scale),
+    terminal_cadence: cadence_summary(analysis),
+    top_motive: top_repeated_motive(analysis),
+    form: list.map(piece.sections, fn(s) { s.label }),
+    harmony_histogram: analysis.style.harmony
+  }
+}
+
+export { analysis_report, key_summary, cadence_summary, top_repeated_motive, form_summary }

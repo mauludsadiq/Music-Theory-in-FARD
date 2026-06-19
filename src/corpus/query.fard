@@ -1,0 +1,12 @@
+import("std/rec") as rec
+import("../core/validate") as v
+import("./index") as index
+
+fn find_by_title(corpus, title) {
+  let idx = index.by_title(corpus) in
+  if !rec.has(idx, title) then v.err("CORPUS_TITLE_NOT_FOUND", title) else
+  let i = rec.get(idx, title) in
+  v.ok({ piece: corpus.pieces[i], analysis: corpus.analyses[i] })
+}
+
+export { find_by_title }

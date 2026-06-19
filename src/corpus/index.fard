@@ -1,0 +1,19 @@
+import("std/list") as list
+import("std/rec") as rec
+import("../core/canon") as canon
+
+fn by_title(corpus) {
+  list.fold(list.range(0, list.len(corpus.pieces)), {}, fn(acc, i) {
+    rec.set(acc, corpus.pieces[i].title, i)
+  })
+}
+
+fn by_digest(corpus) {
+  list.fold(list.range(0, list.len(corpus.pieces)), {}, fn(acc, i) {
+    rec.set(acc, canon.digest_value(corpus.pieces[i]), i)
+  })
+}
+
+fn build(corpus) { { title_index: by_title(corpus), digest_index: by_digest(corpus) } }
+
+export { by_title, by_digest, build }

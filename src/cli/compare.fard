@@ -1,0 +1,7 @@
+import("../compare/similarity") as similarity
+
+fn run(analysis_a, analysis_b) {
+  similarity.total_similarity(analysis_a, analysis_b)
+}
+
+export { run }

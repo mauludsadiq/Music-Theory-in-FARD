@@ -1,0 +1,11 @@
+import("../core/canon") as canon
+
+fn analysis_payload(piece, analysis) {
+  { piece: piece, analysis: analysis }
+}
+
+fn export_json(piece, analysis) {
+  canon.canonical_text(analysis_payload(piece, analysis))
+}
+
+export { analysis_payload, export_json }

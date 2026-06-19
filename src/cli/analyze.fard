@@ -1,0 +1,15 @@
+import("../analysis/engine") as engine
+import("../export/report") as report
+import("../export/markdown") as markdown
+
+fn run(key_scale, piece, melodies, progressions, rhythms) {
+  let analysis = engine.analyze_piece(key_scale, piece, melodies, progressions, rhythms) in
+  {
+    piece: piece,
+    analysis: analysis,
+    report: report.analysis_report(piece, analysis, key_scale),
+    summary: markdown.student_summary(piece, analysis, key_scale)
+  }
+}
+
+export { run }

@@ -1,0 +1,38 @@
+import("std/list") as list
+import("std/str") as str
+import("./report") as report
+
+fn cadence_sentence(rep) {
+  if rep.terminal_cadence == "none" then "It does not end on a clear cadence." else
+  str.concat(["It uses an ", rep.terminal_cadence, " cadence at the end."])
+}
+
+fn motive_sentence(rep) {
+  if rep.top_motive == null then "No motive repeats more than once." else
+  str.concat(["The main motive appears ", str.from(rep.top_motive.count), " times."])
+}
+
+fn form_sentence(rep) {
+  str.concat(["The form is ", str.join(rep.form, " "), "."])
+}
+
+fn key_sentence(rep) {
+  str.concat(["This piece is in ", rep.key.tonic, " ", rep.key.mode, "."])
+}
+
+fn student_summary(piece, analysis, key_scale) {
+  let rep = report.analysis_report(piece, analysis, key_scale) in
+  str.join([key_sentence(rep), cadence_sentence(rep), motive_sentence(rep), form_sentence(rep)], " ")
+}
+
+fn professor_summary(piece, analysis, key_scale) {
+  let rep = report.analysis_report(piece, analysis, key_scale) in
+  str.concat([
+    "# ", rep.title, "\n\n",
+    "**Key:** ", rep.key.tonic, " ", rep.key.mode, "\n\n",
+    "**Terminal cadence:** ", rep.terminal_cadence, "\n\n",
+    "**Form:** ", str.join(rep.form, "-"), "\n"
+  ])
+}
+
+export { student_summary, professor_summary }

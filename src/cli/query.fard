@@ -1,0 +1,10 @@
+import("../query/search") as search
+import("../corpus/query") as corpus_query
+
+fn cadences(analysis, kind) { search.find_cadences(analysis, kind) }
+fn motives_in_section(analysis, label) { search.find_motives_in_section(analysis, label) }
+fn repeated_motives(analysis) { search.find_repeated_motives(analysis) }
+fn style_value(analysis, domain, key) { search.find_style_value(analysis, domain, key) }
+fn piece_by_title(corpus, title) { corpus_query.find_by_title(corpus, title) }
+
+export { cadences, motives_in_section, repeated_motives, style_value, piece_by_title }

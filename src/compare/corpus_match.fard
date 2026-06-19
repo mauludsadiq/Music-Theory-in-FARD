@@ -1,0 +1,13 @@
+import("std/list") as list
+import("std/cast") as cast
+import("./similarity") as similarity
+
+fn rank_against_corpus(target_analysis, corpus) {
+  let scored = list.map(list.range(0, list.len(corpus.pieces)), fn(i) {
+    { title: corpus.pieces[i].title, similarity: similarity.total_similarity(target_analysis, corpus.analyses[i]) }
+  }) in
+  let keyed = list.map(scored, fn(s) { { k: 0 - cast.int(s.similarity.total * 1000.0), v: s } }) in
+  list.map(list.sort_by_int_key(keyed, fn(r) { r.k }), fn(r) { r.v })
+}
+
+export { rank_against_corpus }

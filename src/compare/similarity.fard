@@ -1,0 +1,57 @@
+import("std/list") as list
+import("std/rec") as rec
+import("std/math") as math
+import("std/cast") as cast
+
+fn histogram_keys_union(h1, h2) {
+  list.dedupe(list.concat([rec.keys(h1), rec.keys(h2)]))
+}
+
+fn histogram_cosine(h1, h2) {
+  let keys = histogram_keys_union(h1, h2) in
+  if list.len(keys) == 0 then 1.0 else
+  let dot = list.fold(keys, 0, fn(acc, k) { acc + (rec.getOr(h1, k, 0) * rec.getOr(h2, k, 0)) }) in
+  let mag1 = list.fold(rec.values(h1), 0, fn(acc, v) { acc + (v * v) }) in
+  let mag2 = list.fold(rec.values(h2), 0, fn(acc, v) { acc + (v * v) }) in
+  if mag1 == 0 || mag2 == 0 then 0.0 else
+  let denom = math.sqrt(cast.float(mag1)) * math.sqrt(cast.float(mag2)) in
+  cast.float(dot) / denom
+}
+
+fn style_similarity(a, b) {
+  let rhythm_sim = histogram_cosine(a.style.rhythm, b.style.rhythm) in
+  let contour_sim = histogram_cosine(a.style.contour, b.style.contour) in
+  let harmony_sim = histogram_cosine(a.style.harmony, b.style.harmony) in
+  (rhythm_sim + contour_sim + harmony_sim) / 3.0
+}
+
+fn motive_digest_set(analysis) { list.dedupe(list.map(analysis.motives.items, fn(m) { m.digest })) }
+
+fn motive_similarity(a, b) {
+  let set_a = motive_digest_set(a) in
+  let set_b = motive_digest_set(b) in
+  let union_size = list.len(list.dedupe(list.concat([set_a, set_b]))) in
+  if union_size == 0 then 1.0 else
+  let shared = list.filter(set_a, fn(d) { list.any(set_b, fn(x) { x == d }) }) in
+  cast.float(list.len(shared)) / cast.float(union_size)
+}
+
+fn cadence_kind_set(analysis) { list.dedupe(list.map(analysis.cadences.items, fn(c) { c.kind })) }
+
+fn cadence_similarity(a, b) {
+  let set_a = cadence_kind_set(a) in
+  let set_b = cadence_kind_set(b) in
+  let union_size = list.len(list.dedupe(list.concat([set_a, set_b]))) in
+  if union_size == 0 then 1.0 else
+  let shared = list.filter(set_a, fn(d) { list.any(set_b, fn(x) { x == d }) }) in
+  cast.float(list.len(shared)) / cast.float(union_size)
+}
+
+fn total_similarity(a, b) {
+  let s = style_similarity(a, b) in
+  let m = motive_similarity(a, b) in
+  let c = cadence_similarity(a, b) in
+  { style: s, motive: m, cadence: c, total: (s + m + c) / 3.0 }
+}
+
+export { style_similarity, motive_similarity, cadence_similarity, total_similarity, histogram_cosine }

@@ -1,0 +1,10 @@
+import("std/list") as list
+import("../corpus/corpus") as corpus
+import("../corpus/index") as index
+import("../compare/corpus_match") as corpus_match
+
+fn summary(c) { { name: c.name, piece_count: c.piece_count, titles: list.map(c.pieces, fn(p) { p.title }) } }
+fn build_index(c) { index.build(c) }
+fn rank(target_analysis, c) { corpus_match.rank_against_corpus(target_analysis, c) }
+
+export { summary, build_index, rank }

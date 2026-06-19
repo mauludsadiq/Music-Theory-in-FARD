@@ -1,0 +1,18 @@
+import("std/list") as list
+import("../core/canon") as canon
+import("../core/validate") as v
+
+fn make(name, pieces, analyses) {
+  { layer: "CORPUS", name: name, pieces: pieces, analyses: analyses, piece_count: list.len(pieces) }
+}
+
+fn validate(corpus) {
+  if !v.has_fields(corpus, ["name", "pieces", "analyses", "piece_count"]) then v.err("CORPUS_MISSING_FIELD", corpus) else
+  if corpus.piece_count != list.len(corpus.pieces) then v.err("CORPUS_BAD_PIECE_COUNT", corpus) else
+  if list.len(corpus.analyses) != list.len(corpus.pieces) then v.err("CORPUS_ANALYSES_MISMATCH", corpus) else
+  v.ok(corpus)
+}
+
+fn digest(corpus) { canon.digest_value(list.map(corpus.pieces, fn(p) { canon.digest_value(p) })) }
+
+export { make, validate, digest }
