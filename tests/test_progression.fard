@@ -1,0 +1,121 @@
+import("std/list") as list
+import("../src/layers/note") as note
+import("../src/layers/chord") as chord
+import("../src/layers/scale") as scale
+import("../src/layers/melody") as melody
+import("../src/layers/progression") as progression
+import("../src/core/validate") as v
+
+let c4 = note.make("C", 4, 0.0, "12-TET-A440")
+let d4 = note.make("D", 4, 0.0, "12-TET-A440")
+let e4 = note.make("E", 4, 0.0, "12-TET-A440")
+let f4 = note.make("F", 4, 0.0, "12-TET-A440")
+let g4 = note.make("G", 4, 0.0, "12-TET-A440")
+let a4 = note.make("A", 4, 0.0, "12-TET-A440")
+let b4 = note.make("B", 4, 0.0, "12-TET-A440")
+
+let cmaj = chord.make(c4, "Major", 0, "close")
+let dmin = chord.make(d4, "Minor", 0, "close")
+let emin = chord.make(e4, "Minor", 0, "close")
+let fmaj = chord.make(f4, "Major", 0, "close")
+let gmaj = chord.make(g4, "Major", 0, "close")
+let amin = chord.make(a4, "Minor", 0, "close")
+let bdim = chord.make(b4, "Diminished", 0, "close")
+let gdom7 = chord.make(g4, "Dominant7", 0, "close")
+
+let key = scale.make(c4, "Major", "Western")
+
+test "root_motion still computes from-to pairs (existing behavior)" {
+  let states = [progression.state("I", cmaj, 1), progression.state("V", gmaj, 1)]
+  let p = progression.make("I V", key, states, null)
+  list.len(p.root_motion) == 1 && p.root_motion[0].from == "C4" && p.root_motion[0].to == "G4"
+}
+
+test "roman_numeral derives I for tonic triad in major key" {
+  progression.roman_numeral(key, cmaj) == "I"
+}
+
+test "roman_numeral derives ii for supertonic triad in major key" {
+  progression.roman_numeral(key, dmin) == "ii"
+}
+
+test "roman_numeral derives IV for subdominant triad in major key" {
+  progression.roman_numeral(key, fmaj) == "IV"
+}
+
+test "roman_numeral derives V for dominant triad in major key" {
+  progression.roman_numeral(key, gmaj) == "V"
+}
+
+test "roman_numeral derives vi for submediant triad in major key" {
+  progression.roman_numeral(key, amin) == "vi"
+}
+
+test "roman_numeral derives vii_dim for leading tone triad in major key" {
+  progression.roman_numeral(key, bdim) == "vii°"
+}
+
+test "roman_numeral derives V7 for dominant seventh chord" {
+  progression.roman_numeral(key, gdom7) == "V7"
+}
+
+test "detect_cadence finds authentic cadence (V to I)" {
+  let states = [progression.state("I", cmaj, 1), progression.state("IV", fmaj, 1), progression.state("V", gmaj, 1), progression.state("I", cmaj, 1)]
+  let p = progression.make("I IV V I", key, states, null)
+  progression.detect_cadence(key, p) == "authentic"
+}
+
+test "detect_cadence finds plagal cadence (IV to I)" {
+  let states = [progression.state("I", cmaj, 1), progression.state("V", gmaj, 1), progression.state("IV", fmaj, 1), progression.state("I", cmaj, 1)]
+  let p = progression.make("I V IV I", key, states, null)
+  progression.detect_cadence(key, p) == "plagal"
+}
+
+test "detect_cadence finds half cadence (ends on V)" {
+  let states = [progression.state("I", cmaj, 1), progression.state("IV", fmaj, 1), progression.state("V", gmaj, 1)]
+  let p = progression.make("I IV V", key, states, null)
+  progression.detect_cadence(key, p) == "half"
+}
+
+test "detect_cadence finds deceptive cadence (V to vi)" {
+  let states = [progression.state("I", cmaj, 1), progression.state("IV", fmaj, 1), progression.state("V", gmaj, 1), progression.state("vi", amin, 1)]
+  let p = progression.make("I IV V vi", key, states, null)
+  progression.detect_cadence(key, p) == "deceptive"
+}
+
+test "detect_cadence returns none for non-cadential ending" {
+  let states = [progression.state("I", cmaj, 1), progression.state("ii", dmin, 1)]
+  let p = progression.make("I ii", key, states, null)
+  progression.detect_cadence(key, p) == "none"
+}
+
+let ddom7 = chord.make(d4, "Dominant7", 0, "close")
+let aatdom = chord.make(a4, "Dominant7", 0, "close")
+
+test "detect_secondary_dominants finds V/V resolving to V" {
+  let states = [progression.state("I", cmaj, 1), progression.state("V/V", ddom7, 1), progression.state("V", gmaj, 1)]
+  let p = progression.make("I V/V V", key, states, null)
+  let secondaries = progression.detect_secondary_dominants(key, p)
+  list.len(secondaries) == 1 && secondaries[0].index == 1 && secondaries[0].target == "V"
+}
+
+test "detect_secondary_dominants finds V/vi resolving to vi" {
+  let states = [progression.state("I", cmaj, 1), progression.state("V/vi", aatdom, 1), progression.state("vi", amin, 1)]
+  let p = progression.make("I V/vi vi", key, states, null)
+  let secondaries = progression.detect_secondary_dominants(key, p)
+  list.len(secondaries) == 1 && secondaries[0].index == 1 && secondaries[0].target == "vi"
+}
+
+test "detect_secondary_dominants ignores diatonic dominant seventh on V itself" {
+  let states = [progression.state("I", cmaj, 1), progression.state("V7", gdom7, 1), progression.state("I", cmaj, 1)]
+  let p = progression.make("I V7 I", key, states, null)
+  let secondaries = progression.detect_secondary_dominants(key, p)
+  list.len(secondaries) == 0
+}
+
+test "detect_secondary_dominants returns empty for progression with no dominant sevenths" {
+  let states = [progression.state("I", cmaj, 1), progression.state("IV", fmaj, 1)]
+  let p = progression.make("I IV", key, states, null)
+  let secondaries = progression.detect_secondary_dominants(key, p)
+  list.len(secondaries) == 0
+}
