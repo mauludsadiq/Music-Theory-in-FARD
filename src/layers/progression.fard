@@ -1,4 +1,5 @@
 import("std/list") as list
+import("std/str") as str
 import("../core/canon") as canon
 import("../core/validate") as v
 import("./chord") as chord
@@ -11,6 +12,30 @@ let rules_name = "HarmonicProgressionValidationRules"
 
 fn state(symbol, chord_record, beats) { { symbol: symbol, chord_digest: chord.digest(chord_record), chord_quality: chord_record.quality, root: chord_record.root, beats: beats } }
 fn root_motion(states) { list.map(list.range(1, list.len(states)), fn(i) { { from: states[i - 1].root, to: states[i].root } }) }
+
+let degree_numerals = ["I", "ii", "iii", "IV", "V", "vi", "vii"]
+
+fn scale_degree_index(key_scale, ch_root_digest) {
+  list.find_index(key_scale.note_digests, fn(d) { d == ch_root_digest })
+}
+
+fn numeral_case(base, quality) {
+  if quality == "Major" || quality == "Dominant7" || quality == "Major7" then base else
+  if quality == "Minor" || quality == "Minor7" then str.lower(base) else
+  if quality == "Diminished" then str.concat([str.lower(base), "°"]) else
+  if quality == "Augmented" then str.concat([base, "+"]) else
+  base
+}
+
+fn seventh_suffix(quality) {
+  if quality == "Dominant7" || quality == "Major7" || quality == "Minor7" then "7" else ""
+}
+
+fn roman_numeral(key_scale, ch) {
+  let idx = scale_degree_index(key_scale, ch.root_digest) in
+  let base = degree_numerals[idx] in
+  str.concat([numeral_case(base, ch.quality), seventh_suffix(ch.quality)])
+}
 fn make(name, key_scale, states, melody_context) {
   {
     layer: layer_name,
@@ -40,4 +65,4 @@ fn certify(p) { canon.certify(layer_name, schema_name, rules_name, canon.digest_
 fn digest(p) { certify(p).object_digest }
 fn universe_digest() { canon.layer_digest(layer_name, canon.digest_value([chord.universe_digest(), scale.universe_digest(), melody.universe_digest()]), canon.digest_text(schema_name), canon.digest_text(rules_name), canon.digest_text("progression-sequence-rules")) }
 
-export { state, make, validate, certify, digest, universe_digest }
+export { state, make, validate, certify, digest, universe_digest, roman_numeral }
