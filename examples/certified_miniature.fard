@@ -1,0 +1,29 @@
+import("../src/tower") as tower
+import("../src/layers/note") as note
+import("../src/layers/chord") as chord
+import("../src/layers/scale") as scale
+import("../src/layers/rhythm") as rhythm
+import("../src/layers/melody") as melody
+import("../src/layers/progression") as progression
+import("../src/layers/piece") as piece
+
+let c4 = note.make("C", 4, 0.0, "12-TET-A440")
+let f4 = note.make("F", 4, 0.0, "12-TET-A440")
+let g4 = note.make("G", 4, 0.0, "12-TET-A440")
+let q = rhythm.duration("quarter", 1, 4, 0)
+let r = rhythm.pattern("common", rhythm.meter(4, 4, [1,1,1,1]), [rhythm.event("note", q, 0), rhythm.event("note", q, 1), rhythm.event("note", q, 2), rhythm.event("note", q, 3)])
+let sc = scale.make(c4, "Major", "Western")
+let mel = melody.make("C-G-C cell", [c4,g4,c4], [q,q,q], sc, r, null)
+let I = chord.make(c4, "Major", 0, "close")
+let IV = chord.make(f4, "Major", 0, "close")
+let V = chord.make(g4, "Major", 0, "close")
+let prog = progression.make("I IV V I", sc, [progression.state("I", I, 1), progression.state("IV", IV, 1), progression.state("V", V, 1), progression.state("I", I, 1)], mel)
+let work = piece.make("Certified Miniature", "period", "homophonic", "didactic", "contemporary", ["piano"], [mel], [prog], [r], ["A"])
+
+{
+  tower_digest: tower.tower_digest(),
+  note_certificate: note.certify(c4),
+  interval_layer: tower.layer_table()[1],
+  piece_certificate: piece.certify(work),
+  trace: tower.trace_tower()
+}

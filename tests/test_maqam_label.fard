@@ -1,0 +1,6 @@
+import("../src/layers/note") as note
+import("../src/layers/scale") as scale
+
+let c4 = note.make("C", 4, 0.0, "12-TET-A440")
+let maqam = scale.make(c4, "MaqamRast", "Arabic")
+maqam.tradition

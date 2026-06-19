@@ -1,0 +1,43 @@
+import("std/list") as list
+import("../core/canon") as canon
+import("../core/validate") as v
+import("./chord") as chord
+import("./scale") as scale
+import("./melody") as melody
+
+let layer_name = "PROGRESSION"
+let schema_name = "HarmonicProgressionRecord"
+let rules_name = "HarmonicProgressionValidationRules"
+
+fn state(symbol, chord_record, beats) { { symbol: symbol, chord_digest: chord.digest(chord_record), chord_quality: chord_record.quality, root: chord_record.root, beats: beats } }
+fn root_motion(states) { list.map(list.range(1, list.len(states)), fn(i) { { from: states[i - 1].root, to: states[i].root } }) }
+fn make(name, key_scale, states, melody_context) {
+  {
+    layer: layer_name,
+    name: name,
+    key_scale_digest: scale.digest(key_scale),
+    states: states,
+    length: list.len(states),
+    roman_numerals: list.map(states, fn(s) { s.symbol }),
+    root_motion: root_motion(states),
+    cadences: [],
+    modulation: false,
+    substitutions: [],
+    melody_digest: if melody_context == null then null else melody.digest(melody_context)
+  }
+}
+
+fn validate(p) {
+  if !v.has_fields(p, ["name", "key_scale_digest", "states", "length", "roman_numerals", "root_motion"]) then v.err("PROGRESSION_MISSING_FIELD", p) else
+  if p.length <= 0 then v.err("PROGRESSION_EMPTY", p) else
+  if p.length != list.len(p.states) then v.err("PROGRESSION_BAD_LENGTH", p) else
+  if list.len(p.root_motion) != p.length - 1 then v.err("PROGRESSION_BAD_ROOT_MOTION", p) else
+  if !list.all(p.states, fn(s) { v.has_fields(s, ["symbol", "chord_digest", "beats"]) && s.beats > 0 }) then v.err("PROGRESSION_BAD_STATE", p.states) else
+  v.ok(p)
+}
+
+fn certify(p) { canon.certify(layer_name, schema_name, rules_name, canon.digest_value([chord.universe_digest(), scale.universe_digest(), melody.universe_digest()]), p) }
+fn digest(p) { certify(p).object_digest }
+fn universe_digest() { canon.layer_digest(layer_name, canon.digest_value([chord.universe_digest(), scale.universe_digest(), melody.universe_digest()]), canon.digest_text(schema_name), canon.digest_text(rules_name), canon.digest_text("progression-sequence-rules")) }
+
+export { state, make, validate, certify, digest, universe_digest }

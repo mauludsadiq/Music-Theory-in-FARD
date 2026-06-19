@@ -1,0 +1,32 @@
+import("std/list") as list
+import("../core/canon") as canon
+import("../core/validate") as v
+
+let layer_name = "RHYTHM"
+let schema_name = "RhythmRecord"
+let rules_name = "RhythmValidationRules"
+let lower_digest = "sha256:RHYTHM_ORTHOGONAL_TO_PITCH"
+
+fn duration(name, numerator, denominator, dots) { { kind: "duration", name: name, numerator: numerator, denominator: denominator, dots: dots } }
+fn meter(beats, unit, grouping) { { kind: "meter", beats: beats, unit: unit, grouping: grouping, simple: beats == 2 || beats == 3 || beats == 4, compound: beats % 3 == 0 && beats > 3 } }
+fn event(kind, dur, onset) { { kind: kind, duration: dur, onset: onset } }
+fn syncopation_score(events) { list.fold(events, 0, fn(acc, e) { if e.onset % 2 != 0 then acc + 1 else acc }) }
+fn tuplet_events(events) { list.filter(events, fn(e) { v.has_fields(e.duration, ["tuplet"]) }) }
+fn pattern(name, meter_record, events) { { layer: layer_name, name: name, meter: meter_record, events: events, length: list.len(events), syncopation_score: syncopation_score(events), polymeter: false, tuplets: tuplet_events(events) } }
+
+fn validate_duration(d) { if !v.has_fields(d, ["kind", "name", "numerator", "denominator", "dots"]) then v.err("DURATION_MISSING_FIELD", d) else if d.denominator <= 0 || d.numerator <= 0 then v.err("DURATION_BAD_RATIO", d) else v.ok(d) }
+fn validate_meter(m) { if !v.has_fields(m, ["kind", "beats", "unit", "grouping"]) then v.err("METER_MISSING_FIELD", m) else if m.beats <= 0 || m.unit <= 0 then v.err("METER_BAD_VALUE", m) else v.ok(m) }
+fn validate(r) {
+  if !v.has_fields(r, ["name", "meter", "events", "length"]) then v.err("RHYTHM_MISSING_FIELD", r) else
+  if v.is_err(validate_meter(r.meter)) then validate_meter(r.meter) else
+  if r.length != list.len(r.events) then v.err("RHYTHM_BAD_LENGTH", r) else
+  if !list.all(r.events, fn(e) { v.has_fields(e, ["kind", "duration", "onset"]) && v.is_ok(validate_duration(e.duration)) }) then v.err("RHYTHM_BAD_EVENT", r.events) else
+  v.ok(r)
+}
+
+fn certify(r) { canon.certify(layer_name, schema_name, rules_name, lower_digest, r) }
+fn digest(r) { certify(r).object_digest }
+fn inventory() { [duration("quarter", 1, 4, 0), duration("eighth", 1, 8, 0), meter(4, 4, [1,1,1,1]), meter(7, 8, [2,2,3])] }
+fn universe_digest() { canon.layer_digest(layer_name, lower_digest, canon.digest_text(schema_name), canon.digest_text(rules_name), canon.digest_value(inventory())) }
+
+export { duration, meter, event, syncopation_score, tuplet_events, pattern, validate_duration, validate_meter, validate, certify, digest, inventory, universe_digest }

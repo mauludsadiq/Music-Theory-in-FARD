@@ -1,0 +1,62 @@
+import("std/list") as list
+import("std/math") as math
+import("std/str") as str
+import("std/rec") as rec
+import("../core/canon") as canon
+import("../core/validate") as v
+
+let layer_name = "NOTE"
+let schema_name = "NoteRecord"
+let rules_name = "NoteValidationRules"
+let lower_digest = "sha256:GENESIS"
+let pitch_classes = ["C", "C#", "D", "D#", "E", "F", "F#", "G", "G#", "A", "A#", "B"]
+let flat_aliases = { "Db": "C#", "Eb": "D#", "Gb": "F#", "Ab": "G#", "Bb": "A#", "Cb": "B", "Fb": "E", "E#": "F", "B#": "C" }
+
+fn pc_index(pc) { list.find_index(pitch_classes, fn(x) { x == pc }) }
+fn normalize_pc(pc) { if rec.has(flat_aliases, pc) then rec.get(flat_aliases, pc) else pc }
+fn cents_factor(cents) { math.pow(2.0, cents / 1200.0) }
+fn freq_12tet(midi_note, cents) { 440.0 * math.pow(2.0, (midi_note - 69) / 12.0) * cents_factor(cents) }
+fn midi_for(pc, octave) { (octave + 1) * 12 + pc_index(normalize_pc(pc)) }
+fn transpose(n, semis) { make(pitch_classes[(n.midi_note + semis) % 12], ((n.midi_note + semis) / 12) - 1, n.cents, n.tuning_system) }
+fn register_name(octave) {
+  if octave < 0 then "sub-contra" else if octave == 0 then "contra" else if octave == 1 then "great" else if octave == 2 then "small" else if octave == 3 then "one-line-lower" else if octave == 4 then "one-line" else if octave == 5 then "two-line" else if octave == 6 then "three-line" else if octave == 7 then "four-line" else "five-line-plus"
+}
+
+fn make(pc, octave, cents, tuning_system) {
+  let npc = normalize_pc(pc) in
+  let midi = midi_for(npc, octave) in
+  let name = str.concat([npc, str.from(octave)]) in
+  {
+    layer: layer_name,
+    pitch_class: npc,
+    written_pitch_class: pc,
+    octave: octave,
+    register: register_name(octave),
+    accidental: if str.contains(npc, "#") then "sharp" else "natural",
+    midi_note: midi,
+    frequency_hz: freq_12tet(midi, cents),
+    cents: cents,
+    tuning_system: tuning_system,
+    aliases: if pc == npc then [name] else [name, str.concat([pc, str.from(octave)])],
+    name: name
+  }
+}
+
+fn validate(note) {
+  let base = v.require_record(note, "NOTE_NOT_RECORD") in
+  if v.is_err(base) then base else
+  if !v.has_fields(note, ["pitch_class", "octave", "midi_note", "frequency_hz", "tuning_system", "aliases", "name"]) then v.err("NOTE_MISSING_FIELD", note) else
+  if pc_index(note.pitch_class) < 0 then v.err("NOTE_BAD_PITCH_CLASS", note.pitch_class) else
+  if note.midi_note < 0 || note.midi_note > 127 then v.err("NOTE_MIDI_OUT_OF_RANGE", note.midi_note) else
+  if note.frequency_hz <= 0.0 then v.err("NOTE_BAD_FREQUENCY", note.frequency_hz) else
+  v.ok(note)
+}
+
+fn certify(note) { canon.certify(layer_name, schema_name, rules_name, lower_digest, note) }
+fn digest(note) { certify(note).object_digest }
+fn canonical_bytes(note) { canon.canonical_bytes(note) }
+fn predicate_signature(note) { canon.digest_value({ predicate: "valid_note", note_digest: digest(note), ok: v.is_ok(validate(note)) }) }
+fn inventory() { list.map(list.range(0, 128), fn(m) { make(pitch_classes[m % 12], (m / 12) - 1, 0.0, "12-TET-A440") }) }
+fn universe_digest() { canon.digest_value(inventory()) }
+
+export { layer_name, pitch_classes, make, validate, certify, digest, canonical_bytes, predicate_signature, inventory, universe_digest, midi_for, freq_12tet, normalize_pc, transpose }

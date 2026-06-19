@@ -1,0 +1,49 @@
+import("std/list") as list
+import("../core/canon") as canon
+import("../core/validate") as v
+import("./note") as note
+import("./scale") as scale
+import("./rhythm") as rhythm
+import("./chord") as chord
+
+let layer_name = "MELODY"
+let schema_name = "MelodyPhraseRecord"
+let rules_name = "MelodyPhraseValidationRules"
+
+fn signed_step(a, b) { b.midi_note - a.midi_note }
+fn contour(notes) { list.map(list.range(1, list.len(notes)), fn(i) { let d = signed_step(notes[i - 1], notes[i]) in if d > 0 then "up" else if d < 0 then "down" else "same" }) }
+fn range_semitones(notes) { let mids = list.map(notes, fn(n) { n.midi_note }) in list.last(list.sort_int(mids)) - list.head(list.sort_int(mids)) }
+fn event(n, d) { { note: n.name, note_digest: note.digest(n), duration: d, duration_digest: canon.digest_value(d) } }
+fn make(name, notes, durations, scale_record, rhythm_record, chord_context) {
+  let evs = list.map(list.range(0, list.len(notes)), fn(i) { event(notes[i], durations[i]) }) in
+  {
+    layer: layer_name,
+    name: name,
+    events: evs,
+    length: list.len(evs),
+    note_digests: list.map(notes, fn(n) { note.digest(n) }),
+    scale_digest: scale.digest(scale_record),
+    rhythm_digest: rhythm.digest(rhythm_record),
+    chord_digest: if chord_context == null then null else chord.digest(chord_context),
+    contour: contour(notes),
+    range_semitones: range_semitones(notes),
+    motives: [],
+    cadences: [],
+    phrase_structure: "single-phrase"
+  }
+}
+
+fn validate(m) {
+  if !v.has_fields(m, ["name", "events", "length", "note_digests", "scale_digest", "rhythm_digest", "contour", "range_semitones"]) then v.err("MELODY_MISSING_FIELD", m) else
+  if m.length <= 0 then v.err("MELODY_EMPTY", m) else
+  if m.length != list.len(m.events) then v.err("MELODY_BAD_LENGTH", m) else
+  if list.len(m.contour) != m.length - 1 then v.err("MELODY_BAD_CONTOUR", m.contour) else
+  if m.range_semitones < 0 then v.err("MELODY_BAD_RANGE", m.range_semitones) else
+  v.ok(m)
+}
+
+fn certify(m) { canon.certify(layer_name, schema_name, rules_name, canon.digest_value([note.universe_digest(), scale.universe_digest(), rhythm.universe_digest(), chord.universe_digest()]), m) }
+fn digest(m) { certify(m).object_digest }
+fn universe_digest() { canon.layer_digest(layer_name, canon.digest_value([note.universe_digest(), scale.universe_digest(), rhythm.universe_digest(), chord.universe_digest()]), canon.digest_text(schema_name), canon.digest_text(rules_name), canon.digest_text("melody-sequence-rules")) }
+
+export { event, make, validate, certify, digest, universe_digest, contour, range_semitones }

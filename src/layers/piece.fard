@@ -1,0 +1,48 @@
+import("std/list") as list
+import("../core/canon") as canon
+import("../core/validate") as v
+import("./note") as note
+import("./interval") as interval
+import("./chord") as chord
+import("./scale") as scale
+import("./rhythm") as rhythm
+import("./melody") as melody
+import("./progression") as progression
+
+let layer_name = "PIECE"
+let schema_name = "PieceMovementRecord"
+let rules_name = "PieceMovementValidationRules"
+
+fn make(title, form, texture, style, era, instrumentation, melodies, progressions, rhythms, sections) {
+  {
+    layer: layer_name,
+    title: title,
+    form: form,
+    texture: texture,
+    style: style,
+    era: era,
+    instrumentation: instrumentation,
+    melody_digests: list.map(melodies, fn(m) { melody.digest(m) }),
+    progression_digests: list.map(progressions, fn(p) { progression.digest(p) }),
+    rhythm_digests: list.map(rhythms, fn(r) { rhythm.digest(r) }),
+    sections: sections,
+    section_count: list.len(sections),
+    analyses: { form: form, texture: texture, style_fingerprint: canon.digest_value({style: style, era: era, instrumentation: instrumentation}), material_counts: { melodies: list.len(melodies), progressions: list.len(progressions), rhythms: list.len(rhythms), sections: list.len(sections) } }
+  }
+}
+
+fn validate(piece) {
+  if !v.has_fields(piece, ["title", "form", "texture", "style", "era", "instrumentation", "melody_digests", "progression_digests", "rhythm_digests", "sections", "section_count", "analyses"]) then v.err("PIECE_MISSING_FIELD", piece) else
+  if piece.title == "" then v.err("PIECE_EMPTY_TITLE", piece) else
+  if list.len(piece.melody_digests) == 0 then v.err("PIECE_NO_MELODY", piece) else
+  if list.len(piece.rhythm_digests) == 0 then v.err("PIECE_NO_RHYTHM", piece) else
+  if piece.section_count != list.len(piece.sections) then v.err("PIECE_BAD_SECTION_COUNT", piece) else
+  v.ok(piece)
+}
+
+fn lower_digest() { canon.digest_value([note.universe_digest(), interval.universe_digest(), chord.universe_digest(), scale.universe_digest(), rhythm.universe_digest(), melody.universe_digest(), progression.universe_digest()]) }
+fn certify(piece) { canon.certify(layer_name, schema_name, rules_name, lower_digest(), piece) }
+fn digest(piece) { certify(piece).object_digest }
+fn universe_digest() { canon.layer_digest(layer_name, lower_digest(), canon.digest_text(schema_name), canon.digest_text(rules_name), canon.digest_text("piece-movement-rules")) }
+
+export { make, validate, certify, digest, universe_digest, lower_digest }

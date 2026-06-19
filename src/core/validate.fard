@@ -1,0 +1,40 @@
+import("std/rec") as rec
+import("std/list") as list
+import("std/type") as type
+
+fn ok(v) { { t: "ok", v: v } }
+fn err(code, data) { { t: "err", code: code, data: data } }
+fn is_ok(r) { rec.has(r, "t") && r.t == "ok" }
+fn is_err(r) { rec.has(r, "t") && r.t == "err" }
+
+fn require(cond, code, data) {
+  if cond then ok(true) else err(code, data)
+}
+
+fn require_record(v, code) { require(type.of(v) == "record", code, v) }
+fn require_text(v, code) { require(type.of(v) == "text", code, v) }
+fn require_int(v, code) { require(type.of(v) == "int", code, v) }
+fn require_float(v, code) { require(type.of(v) == "float" || type.of(v) == "int", code, v) }
+fn require_list(v, code) { require(type.of(v) == "list", code, v) }
+
+fn has_fields(r, fields) {
+  list.all(fields, fn(k) { rec.has(r, k) })
+}
+
+fn unique_ints(xs) {
+  let sorted = list.sort_int(xs) in
+  let n = list.len(sorted) in
+  let idxs = list.range(1, n) in
+  list.all(idxs, fn(i) { sorted[i] != sorted[i - 1] })
+}
+
+fn all_ok(results) {
+  list.all(results, fn(r) { is_ok(r) })
+}
+
+fn first_err(results) {
+  let found = list.find(results, fn(r) { is_err(r) }) in
+  if rec.has(found, "some") then found.some else ok(true)
+}
+
+export { ok, err, is_ok, is_err, require, require_record, require_text, require_int, require_float, require_list, has_fields, unique_ints, all_ok, first_err }

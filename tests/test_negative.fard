@@ -1,0 +1,22 @@
+import("../src/layers/note") as note
+import("../src/layers/chord") as chord
+import("../src/layers/rhythm") as rhythm
+import("../src/core/validate") as v
+
+test "bad midi note rejected" {
+  let bad = { pitch_class: "C", octave: 99, midi_note: 999, frequency_hz: 1.0, tuning_system: "12-TET-A440", aliases: [], name: "C99" }
+  v.is_err(note.validate(bad))
+}
+
+test "bad chord inversion rejected" {
+  let c4 = note.make("C", 4, 0.0, "12-TET-A440")
+  let ch = chord.make(c4, "Major", 9, "close")
+  v.is_err(chord.validate(ch))
+}
+
+test "bad meter rejected" {
+  let m = rhythm.meter(0, 4, [])
+  v.is_err(rhythm.validate_meter(m))
+}
+
+true

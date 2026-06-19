@@ -1,0 +1,24 @@
+import("../src/layers/note") as note
+import("../src/layers/interval") as interval
+
+let c4 = note.make("C", 4, 0.0, "12-TET-A440")
+let g4 = note.make("G", 4, 0.0, "12-TET-A440")
+let e4 = note.make("E", 4, 0.0, "12-TET-A440")
+let d4 = note.make("D", 4, 0.0, "12-TET-A440")
+let b4 = note.make("B", 4, 0.0, "12-TET-A440")
+
+let p5 = interval.make(c4, g4)
+let p5_inv = interval.invert(p5)
+let m3 = interval.make(c4, e4)
+let m3_inv = interval.invert(m3)
+let maj2 = interval.make(c4, d4)
+let maj2_inv = interval.invert(maj2)
+let maj7 = interval.make(c4, b4)
+let maj7_inv = interval.invert(maj7)
+
+{
+  p5: p5.quality, p5_inv: p5_inv.quality,
+  m3: m3.quality, m3_inv: m3_inv.quality,
+  maj2: maj2.quality, maj2_inv: maj2_inv.quality,
+  maj7: maj7.quality, maj7_inv: maj7_inv.quality
+}

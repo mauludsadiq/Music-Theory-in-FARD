@@ -1,0 +1,55 @@
+import("std/list") as list
+import("std/math") as math
+import("std/rec") as rec
+import("../core/canon") as canon
+import("../core/validate") as v
+import("./note") as note
+
+let layer_name = "INTERVAL"
+let schema_name = "IntervalRecord"
+let rules_name = "IntervalValidationRules"
+let quality_by_semitone = ["Perfect Unison", "Minor Second", "Major Second", "Minor Third", "Major Third", "Perfect Fourth", "Tritone", "Perfect Fifth", "Minor Sixth", "Major Sixth", "Minor Seventh", "Major Seventh", "Octave"]
+let ratio_by_semitone = ["1:1", "16:15", "9:8", "6:5", "5:4", "4:3", "45:32", "3:2", "8:5", "5:3", "9:5", "15:8", "2:1"]
+
+fn abs_int(x) { if x < 0 then 0 - x else x }
+fn simple_semitones(semitones) { abs_int(semitones) % 12 }
+fn quality(semitones) { quality_by_semitone[simple_semitones(semitones)] }
+fn ratio(semitones) { ratio_by_semitone[simple_semitones(semitones)] }
+fn consonance(semitones) { let s = simple_semitones(semitones) in if s == 0 || s == 3 || s == 4 || s == 5 || s == 7 || s == 8 || s == 9 then "consonant" else "dissonant" }
+
+fn make(a, b) {
+  let semis = b.midi_note - a.midi_note in
+  {
+    layer: layer_name,
+    note_a_digest: note.digest(a),
+    note_b_digest: note.digest(b),
+    note_a: a.name,
+    note_b: b.name,
+    directed_semitones: semis,
+    semitones: abs_int(semis),
+    simple_semitones: simple_semitones(semis),
+    quality: quality(semis),
+    number: simple_semitones(semis) + 1,
+    diatonic_steps: simple_semitones(semis) + 1,
+    consonance: consonance(semis),
+    harmonic_ratio: ratio(semis)
+  }
+}
+
+fn validate(iv) {
+  if !v.has_fields(iv, ["note_a_digest", "note_b_digest", "directed_semitones", "quality", "harmonic_ratio"]) then v.err("INTERVAL_MISSING_FIELD", iv) else
+  if iv.semitones < 0 then v.err("INTERVAL_NEGATIVE_SIZE", iv) else
+  if iv.simple_semitones < 0 || iv.simple_semitones > 11 then v.err("INTERVAL_BAD_SIMPLE_SIZE", iv.simple_semitones) else
+  if quality(iv.directed_semitones) != iv.quality then v.err("INTERVAL_BAD_QUALITY", iv) else
+  v.ok(iv)
+}
+
+fn compose(a, b) { a.directed_semitones + b.directed_semitones }
+fn invert(iv) { { ...iv, directed_semitones: 12 - iv.simple_semitones, simple_semitones: (12 - iv.simple_semitones) % 12, quality: quality(12 - iv.simple_semitones), harmonic_ratio: ratio(12 - iv.simple_semitones) } }
+fn subtract(a, b) { a.directed_semitones - b.directed_semitones }
+fn certify(iv) { canon.certify(layer_name, schema_name, rules_name, note.universe_digest(), iv) }
+fn digest(iv) { certify(iv).object_digest }
+fn inventory() { list.map(list.range(0, 13), fn(s) { { semitones: s, quality: quality(s), consonance: consonance(s), harmonic_ratio: ratio(s) } }) }
+fn universe_digest() { canon.layer_digest(layer_name, note.universe_digest(), canon.digest_text(schema_name), canon.digest_text(rules_name), canon.digest_value(inventory())) }
+
+export { make, validate, compose, invert, subtract, certify, digest, inventory, universe_digest, quality, consonance, ratio }

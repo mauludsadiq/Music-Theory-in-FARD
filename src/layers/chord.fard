@@ -1,0 +1,52 @@
+import("std/list") as list
+import("std/rec") as rec
+import("std/str") as str
+import("../core/canon") as canon
+import("../core/validate") as v
+import("./note") as note
+import("./interval") as interval
+
+let layer_name = "CHORD"
+let schema_name = "ChordRecord"
+let rules_name = "ChordValidationRules"
+let qualities = { Major: [0,4,7], Minor: [0,3,7], Diminished: [0,3,6], Augmented: [0,4,8], Dominant7: [0,4,7,10], Major7: [0,4,7,11], Minor7: [0,3,7,10], Sus4: [0,5,7] }
+
+fn notes_from_pattern(root, pattern) { list.map(pattern, fn(s) { note.transpose(root, s) }) }
+fn note_names(ns) { list.map(ns, fn(n) { n.name }) }
+fn interval_digests(ns) { list.map(ns, fn(n) { interval.digest(interval.make(ns[0], n)) }) }
+
+fn make(root, quality_name, inversion, voicing) {
+  let pattern = rec.get(qualities, quality_name) in
+  let ns = notes_from_pattern(root, pattern) in
+  {
+    layer: layer_name,
+    root: root.name,
+    root_digest: note.digest(root),
+    quality: quality_name,
+    interval_pattern: pattern,
+    notes: note_names(ns),
+    note_digests: list.map(ns, fn(n) { note.digest(n) }),
+    interval_digests: interval_digests(ns),
+    inversion: inversion,
+    voicing: voicing,
+    function: "unspecified",
+    spacing: if voicing == "open" then "open" else "close"
+  }
+}
+
+fn validate(ch) {
+  if !v.has_fields(ch, ["root_digest", "quality", "interval_pattern", "note_digests", "interval_digests", "inversion", "voicing"]) then v.err("CHORD_MISSING_FIELD", ch) else
+  if !rec.has(qualities, ch.quality) then v.err("CHORD_UNKNOWN_QUALITY", ch.quality) else
+  if list.len(ch.interval_pattern) < 2 then v.err("CHORD_TOO_SMALL", ch.interval_pattern) else
+  if !v.unique_ints(ch.interval_pattern) then v.err("CHORD_DUPLICATE_INTERVAL", ch.interval_pattern) else
+  if ch.interval_pattern[0] != 0 then v.err("CHORD_MUST_START_AT_ROOT", ch.interval_pattern) else
+  if ch.inversion < 0 || ch.inversion >= list.len(ch.interval_pattern) then v.err("CHORD_BAD_INVERSION", ch.inversion) else
+  v.ok(ch)
+}
+
+fn certify(ch) { canon.certify(layer_name, schema_name, rules_name, interval.universe_digest(), ch) }
+fn digest(ch) { certify(ch).object_digest }
+fn inventory(root) { list.map(rec.keys(qualities), fn(q) { make(root, q, 0, "close") }) }
+fn universe_digest() { canon.layer_digest(layer_name, interval.universe_digest(), canon.digest_text(schema_name), canon.digest_text(rules_name), canon.digest_value(qualities)) }
+
+export { make, validate, certify, digest, inventory, universe_digest, qualities }

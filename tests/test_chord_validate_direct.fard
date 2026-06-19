@@ -1,0 +1,14 @@
+import("../src/layers/chord") as chord
+import("../src/core/validate") as v
+
+test "hand-built bad chord rejected at root check" {
+  let bad = {
+    layer: "CHORD", root: "C4", root_digest: "sha256:fake",
+    quality: "Major", interval_pattern: [1, 4, 7],
+    notes: ["C4","E4","G4"], note_digests: ["a","b","c"],
+    interval_digests: ["a","b","c"], inversion: 0, voicing: "close",
+    function: "unspecified", spacing: "close"
+  }
+  v.is_err(chord.validate(bad))
+}
+true

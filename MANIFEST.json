@@ -1,0 +1,1 @@
+{"name":"Music Theory in FARD","version":"1.0.0","language":"FARD v1.7.1","entrypoints":["src/tower.fard","examples/certified_miniature.fard"],"tests":["tests/test_tower.fard","tests/test_negative.fard"],"layers":8,"stubs":false,"placeholders":false}

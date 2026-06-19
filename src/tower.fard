@@ -1,0 +1,31 @@
+import("std/list") as list
+import("std/rec") as rec
+import("std/str") as str
+import("./core/canon") as canon
+import("./layers/note") as note
+import("./layers/interval") as interval
+import("./layers/chord") as chord
+import("./layers/scale") as scale
+import("./layers/rhythm") as rhythm
+import("./layers/melody") as melody
+import("./layers/progression") as progression
+import("./layers/piece") as piece
+
+fn layer_table() {
+  [
+    { n: 1, name: "NOTE", digest: note.universe_digest(), depends_on: [] },
+    { n: 2, name: "INTERVAL", digest: interval.universe_digest(), depends_on: ["NOTE"] },
+    { n: 3, name: "CHORD", digest: chord.universe_digest(), depends_on: ["NOTE", "INTERVAL"] },
+    { n: 4, name: "SCALE", digest: scale.universe_digest(), depends_on: ["INTERVAL"] },
+    { n: 5, name: "RHYTHM", digest: rhythm.universe_digest(), depends_on: [] },
+    { n: 6, name: "MELODY", digest: melody.universe_digest(), depends_on: ["NOTE", "SCALE", "RHYTHM", "CHORD"] },
+    { n: 7, name: "PROGRESSION", digest: progression.universe_digest(), depends_on: ["CHORD", "SCALE", "MELODY"] },
+    { n: 8, name: "PIECE", digest: piece.universe_digest(), depends_on: ["NOTE", "INTERVAL", "CHORD", "SCALE", "RHYTHM", "MELODY", "PROGRESSION"] }
+  ]
+}
+
+fn tower_digest() { canon.digest_value(layer_table()) }
+fn verify_tower() { list.all(layer_table(), fn(l) { rec.has(l, "digest") && rec.has(l, "name") && rec.has(l, "depends_on") }) }
+fn trace_tower() { list.map(layer_table(), fn(l) { canon.trace(str.concat(["certify-", l.name]), l.digest, l.depends_on, tower_digest(), true) }) }
+
+export { layer_table, tower_digest, verify_tower, trace_tower, note, interval, chord, scale, rhythm, melody, progression, piece }

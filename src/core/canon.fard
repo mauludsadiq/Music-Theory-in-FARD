@@ -1,0 +1,59 @@
+import("std/json") as json
+import("std/bytes") as bytes
+import("std/hash") as hash
+import("std/str") as str
+
+let schema_version = "MTF-1.0.0"
+
+fn canonical_text(value) {
+  json.canonicalize(value)
+}
+
+fn canonical_bytes(value) {
+  bytes.of_str(canonical_text(value))
+}
+
+fn digest_value(value) {
+  hash.sha256_text(canonical_text(value))
+}
+
+fn digest_text(text) {
+  hash.sha256_text(text)
+}
+
+fn layer_digest(layer_name, lower_digest, schema_digest, rules_digest, inventory_digest) {
+  hash.sha256_text(str.concat([layer_name, "|", lower_digest, "|", schema_digest, "|", rules_digest, "|", inventory_digest]))
+}
+
+fn certify(layer_name, schema_name, rules_name, lower_digest, payload) {
+  let schema_digest = digest_value({ schema: schema_name, version: schema_version }) in
+  let rules_digest = digest_value({ rules: rules_name, version: schema_version }) in
+  let inventory_digest = digest_value(payload) in
+  let object_digest = digest_value({ layer: layer_name, payload: payload }) in
+  let tower_digest = layer_digest(layer_name, lower_digest, schema_digest, rules_digest, inventory_digest) in
+  {
+    schema_version: schema_version,
+    layer: layer_name,
+    schema: schema_name,
+    rules: rules_name,
+    lower_digest: lower_digest,
+    schema_digest: schema_digest,
+    rules_digest: rules_digest,
+    inventory_digest: inventory_digest,
+    object_digest: object_digest,
+    tower_digest: tower_digest,
+    canonical_json: canonical_text(payload)
+  }
+}
+
+fn trace(event, object_digest, input_digests, output_digest, ok) {
+  {
+    event: event,
+    object_digest: object_digest,
+    input_digests: input_digests,
+    output_digest: output_digest,
+    ok: ok
+  }
+}
+
+export { schema_version, canonical_text, canonical_bytes, digest_value, digest_text, layer_digest, certify, trace }
