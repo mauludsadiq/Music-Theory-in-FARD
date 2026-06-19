@@ -107,4 +107,4 @@ fn certify(p) { canon.certify(layer_name, schema_name, rules_name, canon.digest_
 fn digest(p) { certify(p).object_digest }
 fn universe_digest() { canon.layer_digest(layer_name, canon.digest_value([chord.universe_digest(), scale.universe_digest(), melody.universe_digest()]), canon.digest_text(schema_name), canon.digest_text(rules_name), canon.digest_text("progression-sequence-rules")) }
 
-export { state, make, validate, certify, digest, universe_digest, roman_numeral, detect_cadence, detect_secondary_dominants }
+export { state, make, validate, certify, digest, universe_digest, roman_numeral, numeral_for_state, detect_cadence, detect_secondary_dominants }

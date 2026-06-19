@@ -4,15 +4,15 @@ import("./motives") as motives
 import("./cadences") as cadences
 import("./style") as style
 
-fn progression_cadence_summary(progressions) {
+fn progression_cadence_summary(key_scale, progressions) {
   {
-    items: list.flatten(list.map(progressions, fn(p) { cadences.cadences_in_progression(p) })),
-    terminal: list.map(progressions, fn(p) { cadences.terminal_cadence(p) }),
-    density: list.map(progressions, fn(p) { cadences.cadence_density(p) })
+    items: list.flatten(list.map(progressions, fn(p) { cadences.cadences_in_progression(key_scale, p) })),
+    terminal: list.map(progressions, fn(p) { cadences.terminal_cadence(key_scale, p) }),
+    density: list.map(progressions, fn(p) { cadences.cadence_density(key_scale, p) })
   }
 }
 
-fn analyze_piece(piece, melodies, progressions, rhythms) {
+fn analyze_piece(key_scale, piece, melodies, progressions, rhythms) {
   let motive_analysis = {
     window_size: 3,
     items: motives.collect_motives(piece, melodies, 3),
@@ -20,8 +20,8 @@ fn analyze_piece(piece, melodies, progressions, rhythms) {
     by_section: motives.section_motive_map(piece, melodies, 3),
     density: motives.motive_density(piece, melodies, 3)
   } in
-  let cadence_analysis = progression_cadence_summary(progressions) in
-  let style_analysis = style.style_fingerprint(piece, melodies, progressions, rhythms) in
+  let cadence_analysis = progression_cadence_summary(key_scale, progressions) in
+  let style_analysis = style.style_fingerprint(key_scale, piece, melodies, progressions, rhythms) in
   let payload = {
     layer: "ANALYSIS_ENGINE",
     piece_digest: canon.digest_value(piece),

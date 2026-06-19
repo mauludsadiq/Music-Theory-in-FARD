@@ -68,23 +68,23 @@ let pc = piece.make(
   [sec])
 
 test "analyze_piece includes motive analysis" {
-  let a = engine.analyze_piece(pc,[mel],[prog],[rhy])
+  let a = engine.analyze_piece(key,pc,[mel],[prog],[rhy])
   rec.has(a, "motives")
 }
 
 test "analyze_piece includes cadence analysis" {
-  let a = engine.analyze_piece(pc,[mel],[prog],[rhy])
+  let a = engine.analyze_piece(key,pc,[mel],[prog],[rhy])
   rec.has(a, "cadences")
 }
 
 test "analyze_piece includes style analysis" {
-  let a = engine.analyze_piece(pc,[mel],[prog],[rhy])
+  let a = engine.analyze_piece(key,pc,[mel],[prog],[rhy])
   rec.has(a, "style")
 }
 
 test "analysis digest is deterministic" {
-  let a1 = engine.analyze_piece(pc,[mel],[prog],[rhy])
-  let a2 = engine.analyze_piece(pc,[mel],[prog],[rhy])
+  let a1 = engine.analyze_piece(key,pc,[mel],[prog],[rhy])
+  let a2 = engine.analyze_piece(key,pc,[mel],[prog],[rhy])
   a1.analysis_digest == a2.analysis_digest
 }
 
@@ -109,8 +109,8 @@ test "analysis digest changes when piece changes" {
     [rhy],
     [sec])
 
-  let a1 = engine.analyze_piece(pc,[mel],[prog],[rhy])
-  let a2 = engine.analyze_piece(pc2,[mel2],[prog],[rhy])
+  let a1 = engine.analyze_piece(key,pc,[mel],[prog],[rhy])
+  let a2 = engine.analyze_piece(key,pc2,[mel2],[prog],[rhy])
 
   a1.analysis_digest != a2.analysis_digest
 }

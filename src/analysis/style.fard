@@ -2,6 +2,7 @@ import("std/list") as list
 import("std/rec") as rec
 import("../core/canon") as canon
 import("./cadences") as cadences
+import("../layers/progression") as progression
 
 fn inc(hist, key) {
   rec.set(hist, key, rec.getOr(hist, key, 0) + 1)
@@ -23,25 +24,25 @@ fn contour_histogram(melodies) {
   })
 }
 
-fn cadence_histogram(progressions) {
-  list.fold(list.flatten(list.map(progressions, fn(p) { cadences.cadences_in_progression(p) })), {}, fn(acc, c) {
+fn cadence_histogram(key_scale, progressions) {
+  list.fold(list.flatten(list.map(progressions, fn(p) { cadences.cadences_in_progression(key_scale, p) })), {}, fn(acc, c) {
     inc(acc, c.kind)
   })
 }
 
-fn harmonic_function_histogram(progressions) {
+fn harmonic_function_histogram(key_scale, progressions) {
   list.fold(list.flatten(list.map(progressions, fn(p) { p.states })), {}, fn(acc, s) {
-    inc(acc, s.symbol)
+    inc(acc, progression.numeral_for_state(key_scale, s))
   })
 }
 
-fn style_fingerprint(piece, melodies, progressions, rhythms) {
+fn style_fingerprint(key_scale, piece, melodies, progressions, rhythms) {
   {
     piece_digest: canon.digest_value(piece),
     rhythm: rhythm_histogram(rhythms),
     contour: contour_histogram(melodies),
-    cadence: cadence_histogram(progressions),
-    harmony: harmonic_function_histogram(progressions)
+    cadence: cadence_histogram(key_scale, progressions),
+    harmony: harmonic_function_histogram(key_scale, progressions)
   }
 }
 
