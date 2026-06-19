@@ -1,0 +1,99 @@
+import("std/list") as list
+import("../src/layers/note") as note
+import("../src/layers/rhythm") as rhythm
+import("../src/layers/scale") as scale
+import("../src/layers/melody") as melody
+import("../src/core/validate") as v
+
+let c4 = note.make("C", 4, 0.0, "12-TET-A440")
+let d4 = note.make("D", 4, 0.0, "12-TET-A440")
+let e4 = note.make("E", 4, 0.0, "12-TET-A440")
+let q = rhythm.duration("quarter", 1, 4, 0)
+
+test "note_event rejects invalid note" {
+  let bad_note = { pitch_class: "Z", octave: 4, midi_note: -1, frequency_hz: 0.0, tuning_system: "x", aliases: [], name: "bad" }
+  v.is_err(melody.validate_note_event(melody.note_event(bad_note, q, 0)))
+}
+
+test "note_event rejects invalid duration" {
+  let bad_dur = { kind: "duration", name: "bad", numerator: 0, denominator: 0, dots: 0 }
+  v.is_err(melody.validate_note_event(melody.note_event(c4, bad_dur, 0)))
+}
+
+test "note_event computes deterministic onset sequence" {
+  let evs = melody.note_events([c4, d4, e4], [q, q, q])
+  evs[0].onset == 0 && evs[1].onset == 1 && evs[2].onset == 2
+}
+
+
+test "melody.make derives total_duration" {
+  let m = melody.make_from_pairs("triad", [[c4, q], [d4, q], [e4, q]], scale.make(c4, "Major", "Western"), null)
+  m.total_duration == 3
+}
+
+test "melody.make derives interval_chain" {
+  let m = melody.make_from_pairs("triad", [[c4, q], [d4, q], [e4, q]], scale.make(c4, "Major", "Western"), null)
+  list.len(m.interval_chain) == 2
+}
+
+test "contour ascending produces all up" {
+  let notes = [c4, d4, e4]
+  melody.contour(notes) == ["up", "up"]
+}
+
+test "contour descending produces all down" {
+  let notes = [e4, d4, c4]
+  melody.contour(notes) == ["down", "down"]
+}
+
+test "contour repeated note produces same" {
+  let notes = [c4, c4, c4]
+  melody.contour(notes) == ["same", "same"]
+}
+
+test "contour mixed melody produces exact sequence" {
+  let f4 = note.make("F", 4, 0.0, "12-TET-A440")
+  let notes = [c4, e4, d4, d4, f4]
+  melody.contour(notes) == ["up", "down", "same", "up"]
+}
+
+test "motive window size 2 extracts adjacent pairs" {
+  let evs = melody.note_events([c4, d4, e4, c4], [q, q, q, q])
+  let windows = melody.motive_windows(evs, 2)
+  list.len(windows) == 3 && list.len(windows[0]) == 2
+}
+
+test "motive window size 3 extracts triads of motion" {
+  let evs = melody.note_events([c4, d4, e4, c4], [q, q, q, q])
+  let windows = melody.motive_windows(evs, 3)
+  list.len(windows) == 2 && list.len(windows[0]) == 3
+}
+
+test "motive window rejects window_size <= 0" {
+  let evs = melody.note_events([c4, d4, e4], [q, q, q])
+  v.is_err(melody.validate_window_size(evs, 0))
+}
+
+test "motive window rejects window_size > event_count" {
+  let evs = melody.note_events([c4, d4, e4], [q, q, q])
+  v.is_err(melody.validate_window_size(evs, 4))
+}
+
+test "identical melody input gives identical digest" {
+  let m1 = melody.make_from_pairs("a", [[c4, q], [d4, q]], scale.make(c4, "Major", "Western"), null)
+  let m2 = melody.make_from_pairs("a", [[c4, q], [d4, q]], scale.make(c4, "Major", "Western"), null)
+  melody.digest(m1) == melody.digest(m2)
+}
+
+test "changed rhythm changes digest" {
+  let e = rhythm.duration("eighth", 1, 8, 0)
+  let m1 = melody.make_from_pairs("a", [[c4, q], [d4, q]], scale.make(c4, "Major", "Western"), null)
+  let m2 = melody.make_from_pairs("a", [[c4, e], [d4, q]], scale.make(c4, "Major", "Western"), null)
+  melody.digest(m1) != melody.digest(m2)
+}
+
+test "changed pitch changes digest" {
+  let m1 = melody.make_from_pairs("a", [[c4, q], [d4, q]], scale.make(c4, "Major", "Western"), null)
+  let m2 = melody.make_from_pairs("a", [[c4, q], [e4, q]], scale.make(c4, "Major", "Western"), null)
+  melody.digest(m1) != melody.digest(m2)
+}
