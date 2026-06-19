@@ -1,0 +1,116 @@
+import("std/rec") as rec
+
+import("../src/layers/note") as note
+import("../src/layers/scale") as scale
+import("../src/layers/rhythm") as rhythm
+import("../src/layers/melody") as melody
+import("../src/layers/chord") as chord
+import("../src/layers/progression") as progression
+import("../src/layers/piece") as piece
+
+import("../src/analysis/engine") as engine
+
+let c4 = note.make("C", 4, 0.0, "12-TET-A440")
+let d4 = note.make("D", 4, 0.0, "12-TET-A440")
+let e4 = note.make("E", 4, 0.0, "12-TET-A440")
+let f4 = note.make("F", 4, 0.0, "12-TET-A440")
+let g4 = note.make("G", 4, 0.0, "12-TET-A440")
+
+let q = rhythm.duration("quarter", 1, 4, 0)
+
+let rhy = rhythm.pattern(
+  "common",
+  rhythm.meter(4,4,[1,1,1,1]),
+  [
+    rhythm.event("note", q, 0),
+    rhythm.event("note", q, 1),
+    rhythm.event("note", q, 2),
+    rhythm.event("note", q, 3)
+  ])
+
+let key = scale.make(c4, "Major", "Western")
+
+let mel = melody.make(
+  "engine melody",
+  [c4,d4,e4,g4],
+  [q,q,q,q],
+  key,
+  rhy,
+  null)
+
+let cmaj = chord.make(c4, "Major", 0, "close")
+let fmaj = chord.make(f4, "Major", 0, "close")
+let gmaj = chord.make(g4, "Major", 0, "close")
+
+let prog = progression.make(
+  "I IV V I",
+  key,
+  [
+    progression.state("I", cmaj, 1),
+    progression.state("IV", fmaj, 1),
+    progression.state("V", gmaj, 1),
+    progression.state("I", cmaj, 1)
+  ],
+  mel)
+
+let sec = piece.make_section("A",0,4,[0],[0],[0])
+
+let pc = piece.make(
+  "Analysis Piece",
+  "period",
+  "homophonic",
+  "didactic",
+  "contemporary",
+  ["piano"],
+  [mel],
+  [prog],
+  [rhy],
+  [sec])
+
+test "analyze_piece includes motive analysis" {
+  let a = engine.analyze_piece(pc,[mel],[prog],[rhy])
+  rec.has(a, "motives")
+}
+
+test "analyze_piece includes cadence analysis" {
+  let a = engine.analyze_piece(pc,[mel],[prog],[rhy])
+  rec.has(a, "cadences")
+}
+
+test "analyze_piece includes style analysis" {
+  let a = engine.analyze_piece(pc,[mel],[prog],[rhy])
+  rec.has(a, "style")
+}
+
+test "analysis digest is deterministic" {
+  let a1 = engine.analyze_piece(pc,[mel],[prog],[rhy])
+  let a2 = engine.analyze_piece(pc,[mel],[prog],[rhy])
+  a1.analysis_digest == a2.analysis_digest
+}
+
+test "analysis digest changes when piece changes" {
+  let mel2 = melody.make(
+    "changed",
+    [c4,e4,g4,c4],
+    [q,q,q,q],
+    key,
+    rhy,
+    null)
+
+  let pc2 = piece.make(
+    "Changed",
+    "period",
+    "homophonic",
+    "didactic",
+    "contemporary",
+    ["piano"],
+    [mel2],
+    [prog],
+    [rhy],
+    [sec])
+
+  let a1 = engine.analyze_piece(pc,[mel],[prog],[rhy])
+  let a2 = engine.analyze_piece(pc2,[mel2],[prog],[rhy])
+
+  a1.analysis_digest != a2.analysis_digest
+}

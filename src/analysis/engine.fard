@@ -1,0 +1,35 @@
+import("std/list") as list
+import("../core/canon") as canon
+import("./motives") as motives
+import("./cadences") as cadences
+import("./style") as style
+
+fn progression_cadence_summary(progressions) {
+  {
+    items: list.flatten(list.map(progressions, fn(p) { cadences.cadences_in_progression(p) })),
+    terminal: list.map(progressions, fn(p) { cadences.terminal_cadence(p) }),
+    density: list.map(progressions, fn(p) { cadences.cadence_density(p) })
+  }
+}
+
+fn analyze_piece(piece, melodies, progressions, rhythms) {
+  let motive_analysis = {
+    window_size: 3,
+    items: motives.collect_motives(piece, melodies, 3),
+    repeated: motives.repeated_motives(piece, melodies, 3),
+    by_section: motives.section_motive_map(piece, melodies, 3),
+    density: motives.motive_density(piece, melodies, 3)
+  } in
+  let cadence_analysis = progression_cadence_summary(progressions) in
+  let style_analysis = style.style_fingerprint(piece, melodies, progressions, rhythms) in
+  let payload = {
+    layer: "ANALYSIS_ENGINE",
+    piece_digest: canon.digest_value(piece),
+    motives: motive_analysis,
+    cadences: cadence_analysis,
+    style: style_analysis
+  } in
+  { ...payload, analysis_digest: canon.digest_value(payload) }
+}
+
+export { analyze_piece, progression_cadence_summary }
