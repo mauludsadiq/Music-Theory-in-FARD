@@ -43,6 +43,19 @@ src/analysis/motives.fard    motive window extraction, repetition detection, sec
 src/analysis/cadences.fard   cadence classification from certified chord data
 src/analysis/style.fard      rhythm/contour/cadence/harmony histograms, style fingerprinting
 src/query/search.fard        query engine -- reads only certified analysis output
+src/corpus/corpus.fard       certified collections of pieces
+src/corpus/index.fard        deterministic corpus indices (by title, by digest)
+src/corpus/query.fard        corpus-level lookup
+src/compare/similarity.fard  style/motive/cadence similarity between two analyses
+src/compare/corpus_match.fard rank a piece against a corpus
+src/export/report.fard       structured analysis report (key, cadence, motives, form)
+src/export/json.fard         canonical JSON export payloads
+src/export/markdown.fard     student and professor-facing markdown summaries
+src/cli/analyze.fard         analyze one piece end to end
+src/cli/query.fard           ask questions over analysis and corpus
+src/cli/compare.fard         compare two pieces
+src/cli/corpus.fard          inspect a corpus
+corpus/*.fard                certified real-repertoire pieces (Twinkle, Bach Minuet in G, Amazing Grace)
 tests/test_*.fard            layer-spec and tower-behavior tests
 tests/diagnostics/diag_*.fard  meta-property audit probes (determinism, inversion sanity, validation bypass resistance, labeling honesty)
 ```
@@ -57,10 +70,16 @@ Layers 6, 7, and 8 have been expanded using a red-test-first discipline:
 - Layer 7 (Progression): Roman numeral derivation from scale-degree position, cadence classification (authentic, plagal, half, deceptive), secondary dominant detection
 - Layer 8 (Piece): certified sections, timeline construction, overlap detection, material-reference validation, form fingerprints, deterministic form digests
 
-Above the tower sits an analysis and query pipeline that consumes certified layer output without inventing new lower-layer truth -- the architecture is Tower -> Analysis -> Query:
+Above the tower sits a full analysis and reporting pipeline that consumes certified layer output without inventing new lower-layer truth -- the architecture is Tower -> Analysis -> Query -> Corpus -> Compare -> Export -> CLI:
 
 - Analysis Engine (src/analysis/): motive extraction and repetition detection, cadence classification derived from certified chord/scale data (not caller-supplied labels), and style fingerprinting across rhythm, contour, cadence, and harmonic function
 - Query Engine (src/query/search.fard): reads only the certified output of analysis.engine.analyze_piece -- it never re-analyzes the tower directly
+- Corpus (src/corpus/): certified collections of pieces with their analyses, deterministic indices by title and by digest, corpus-level lookup
+- Compare (src/compare/): style, motive, and cadence similarity between two analyses; ranks a piece against a whole corpus
+- Export (src/export/): structured analysis reports, canonical JSON payloads, and student/professor-facing markdown summaries (key, terminal cadence, form, motive breakdown)
+- CLI (src/cli/): thin orchestration over the stack -- analyze a piece end to end, query analysis or corpus data, compare two pieces, inspect a corpus
+
+A small real-repertoire corpus lives under corpus/: Twinkle Twinkle Little Star, the opening of Bach's Minuet in G (BWV Anh. 114, actually by Christian Petzold), and Amazing Grace. Each is a certified Piece object whose form, terminal cadence, and motivic repetition have been verified against the actual music -- for example, the Bach Minuet correctly shows a recurring opening cell across both its A and B sections, while Twinkle correctly shows no exact-pitch repetition since its phrases vary in pitch rather than repeating literally.
 
 ## Run
 
@@ -76,6 +95,11 @@ fardrun test --program tests/test_progression.fard
 fardrun test --program tests/test_piece.fard
 fardrun test --program tests/test_analysis_engine.fard
 fardrun test --program tests/test_query_search.fard
+fardrun test --program tests/test_useful_surface.fard
+fardrun test --program tests/test_corpus_twinkle.fard
+fardrun test --program tests/test_corpus_bach_minuet_g.fard
+fardrun test --program tests/test_corpus_amazing_grace.fard
+fardrun test --program tests/test_export_markdown.fard
 ```
 
 Run a program and capture its digest, trace, and module graph:
