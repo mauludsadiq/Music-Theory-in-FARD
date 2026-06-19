@@ -44,12 +44,13 @@ tests/diagnostics/diag_*.fard  meta-property audit probes (determinism, inversio
 
 ## Status
 
-Layers 1-5 (Note, Interval, Chord, Scale, Rhythm) and Layer 8 (Piece) provide constructors, validators, and certification at a baseline level. Layers 6 and 7 have been expanded beyond baseline using a red-test-first discipline:
+All eight layers of the Musical Theory Tower are implemented.
+
+Layers 6, 7, and 8 have been expanded using a red-test-first discipline:
 
 - Layer 6 (Melody): certified note events with deterministic onsets, contour classification, motive window extraction, interval chains between consecutive notes
 - Layer 7 (Progression): Roman numeral derivation from scale-degree position, cadence classification (authentic, plagal, half, deceptive), secondary dominant detection
-
-Layer 8 (Piece) is the next target for the same expansion: sections, timelines, simultaneous melody/progression/rhythm streams, and form fingerprints.
+- Layer 8 (Piece): certified sections, timeline construction, overlap detection, material-reference validation, form fingerprints, deterministic form digests
 
 ## Run
 
