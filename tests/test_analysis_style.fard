@@ -1,0 +1,90 @@
+import("std/list") as list
+import("std/rec") as rec
+
+import("../src/layers/note") as note
+import("../src/layers/scale") as scale
+import("../src/layers/rhythm") as rhythm
+import("../src/layers/melody") as melody
+import("../src/layers/chord") as chord
+import("../src/layers/progression") as progression
+import("../src/layers/piece") as piece
+import("../src/analysis/style") as style
+
+let c4 = note.make("C", 4, 0.0, "12-TET-A440")
+let d4 = note.make("D", 4, 0.0, "12-TET-A440")
+let e4 = note.make("E", 4, 0.0, "12-TET-A440")
+let f4 = note.make("F", 4, 0.0, "12-TET-A440")
+let g4 = note.make("G", 4, 0.0, "12-TET-A440")
+
+let q = rhythm.duration("quarter", 1, 4, 0)
+let h = rhythm.duration("half", 1, 2, 0)
+
+let rhy = rhythm.pattern("mixed", rhythm.meter(4, 4, [1,1,1,1]), [
+  rhythm.event("note", q, 0),
+  rhythm.event("note", q, 1),
+  rhythm.event("note", h, 2)
+])
+
+let key = scale.make(c4, "Major", "Western")
+
+let mel = melody.make("style melody", [c4,d4,e4,g4], [q,q,h,q], key, rhy, null)
+
+let cmaj = chord.make(c4, "Major", 0, "close")
+let fmaj = chord.make(f4, "Major", 0, "close")
+let gmaj = chord.make(g4, "Major", 0, "close")
+
+let prog = progression.make("I IV V I", key, [
+  progression.state("I", cmaj, 1),
+  progression.state("IV", fmaj, 1),
+  progression.state("V", gmaj, 1),
+  progression.state("I", cmaj, 1)
+], mel)
+
+let sec_a = piece.make_section("A", 0, 4, [0], [0], [0])
+let pc = piece.make("Style Test Piece", "period", "homophonic", "didactic", "contemporary", ["piano"], [mel], [prog], [rhy], [sec_a])
+
+test "rhythm_histogram counts duration names" {
+  let hist = style.rhythm_histogram([rhy])
+  hist.quarter == 2 && hist.half == 1
+}
+
+test "contour_histogram counts melody contour labels" {
+  let hist = style.contour_histogram([mel])
+  hist.up == 3
+}
+
+test "cadence_histogram counts cadence kinds" {
+  let hist = style.cadence_histogram([prog])
+  hist.authentic == 1
+}
+
+test "harmonic_function_histogram counts progression symbols" {
+  let hist = style.harmonic_function_histogram([prog])
+  hist.I == 2 && hist.IV == 1 && hist.V == 1
+}
+
+test "style_fingerprint combines rhythm contour cadence and harmonic histograms" {
+  let fp = style.style_fingerprint(pc, [mel], [prog], [rhy])
+  fp.rhythm.quarter == 2 &&
+  fp.rhythm.half == 1 &&
+  fp.cadence.authentic == 1 &&
+  fp.harmony.I == 2
+}
+
+test "style_digest is deterministic for identical fingerprints" {
+  let fp1 = style.style_fingerprint(pc, [mel], [prog], [rhy])
+  let fp2 = style.style_fingerprint(pc, [mel], [prog], [rhy])
+  style.style_digest(fp1) == style.style_digest(fp2)
+}
+
+test "style_digest changes when rhythm histogram changes" {
+  let rhy2 = rhythm.pattern("changed", rhythm.meter(4, 4, [1,1,1,1]), [
+    rhythm.event("note", q, 0),
+    rhythm.event("note", q, 1),
+    rhythm.event("note", q, 2),
+    rhythm.event("note", q, 3)
+  ])
+  let fp1 = style.style_fingerprint(pc, [mel], [prog], [rhy])
+  let fp2 = style.style_fingerprint(pc, [mel], [prog], [rhy2])
+  style.style_digest(fp1) != style.style_digest(fp2)
+}

@@ -1,0 +1,59 @@
+import("std/list") as list
+import("std/rec") as rec
+import("../core/canon") as canon
+import("./cadences") as cadences
+
+fn inc(hist, key) {
+  rec.set(hist, key, rec.getOr(hist, key, 0) + 1)
+}
+
+fn rhythm_event_name(ev) {
+  ev.duration.name
+}
+
+fn rhythm_histogram(rhythms) {
+  list.fold(list.flatten(list.map(rhythms, fn(r) { r.events })), {}, fn(acc, ev) {
+    inc(acc, rhythm_event_name(ev))
+  })
+}
+
+fn contour_histogram(melodies) {
+  list.fold(list.flatten(list.map(melodies, fn(m) { m.contour })), {}, fn(acc, token) {
+    inc(acc, token)
+  })
+}
+
+fn cadence_histogram(progressions) {
+  list.fold(list.flatten(list.map(progressions, fn(p) { cadences.cadences_in_progression(p) })), {}, fn(acc, c) {
+    inc(acc, c.kind)
+  })
+}
+
+fn harmonic_function_histogram(progressions) {
+  list.fold(list.flatten(list.map(progressions, fn(p) { p.states })), {}, fn(acc, s) {
+    inc(acc, s.symbol)
+  })
+}
+
+fn style_fingerprint(piece, melodies, progressions, rhythms) {
+  {
+    piece_digest: canon.digest_value(piece),
+    rhythm: rhythm_histogram(rhythms),
+    contour: contour_histogram(melodies),
+    cadence: cadence_histogram(progressions),
+    harmony: harmonic_function_histogram(progressions)
+  }
+}
+
+fn style_digest(fp) {
+  canon.digest_value(fp)
+}
+
+export {
+  rhythm_histogram,
+  contour_histogram,
+  cadence_histogram,
+  harmonic_function_histogram,
+  style_fingerprint,
+  style_digest
+}
