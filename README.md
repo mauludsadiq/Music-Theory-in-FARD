@@ -35,12 +35,21 @@ src/layers/chord.fard        Layer 3 -- qualities, voicings, inversions
 src/layers/scale.fard        Layer 4 -- modes, traditions, temperament labeling
 src/layers/rhythm.fard       Layer 5 -- duration, meter, syncopation
 src/layers/melody.fard       Layer 6 -- note events, contour, motive windows, interval chains
-src/layers/progression.fard  Layer 7 -- harmonic states, root motion
+src/layers/progression.fard  Layer 7 -- Roman numeral analysis, cadence detection, secondary dominants
 src/layers/piece.fard        Layer 8 -- sections, instrumentation, form analysis
 src/tower.fard               full digest tower and exports
 tests/test_*.fard            layer-spec and tower-behavior tests
 tests/diagnostics/diag_*.fard  meta-property audit probes (determinism, inversion sanity, validation bypass resistance, labeling honesty)
 ```
+
+## Status
+
+Layers 1-5 (Note, Interval, Chord, Scale, Rhythm) and Layer 8 (Piece) provide constructors, validators, and certification at a baseline level. Layers 6 and 7 have been expanded beyond baseline using a red-test-first discipline:
+
+- Layer 6 (Melody): certified note events with deterministic onsets, contour classification, motive window extraction, interval chains between consecutive notes
+- Layer 7 (Progression): Roman numeral derivation from scale-degree position, cadence classification (authentic, plagal, half, deceptive), secondary dominant detection
+
+Layer 8 (Piece) is the next target for the same expansion: sections, timelines, simultaneous melody/progression/rhythm streams, and form fingerprints.
 
 ## Run
 
@@ -52,6 +61,7 @@ Run the test suite (pass/fail per assertion):
 fardrun test --program tests/test_tower.fard
 fardrun test --program tests/test_negative.fard
 fardrun test --program tests/test_melody.fard
+fardrun test --program tests/test_progression.fard
 ```
 
 Run a program and capture its digest, trace, and module graph:
