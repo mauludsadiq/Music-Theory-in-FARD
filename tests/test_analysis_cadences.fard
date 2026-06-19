@@ -1,0 +1,106 @@
+import("std/list") as list
+
+import("../src/layers/note") as note
+import("../src/layers/scale") as scale
+import("../src/layers/chord") as chord
+import("../src/layers/rhythm") as rhythm
+import("../src/layers/melody") as melody
+import("../src/layers/progression") as progression
+import("../src/layers/piece") as piece
+import("../src/analysis/cadences") as cadences
+import("../src/core/validate") as v
+
+let c4 = note.make("C", 4, 0.0, "12-TET-A440")
+let d4 = note.make("D", 4, 0.0, "12-TET-A440")
+let e4 = note.make("E", 4, 0.0, "12-TET-A440")
+let f4 = note.make("F", 4, 0.0, "12-TET-A440")
+let g4 = note.make("G", 4, 0.0, "12-TET-A440")
+let a4 = note.make("A", 4, 0.0, "12-TET-A440")
+
+let q = rhythm.duration("quarter", 1, 4, 0)
+let rhy = rhythm.pattern("common", rhythm.meter(4, 4, [1,1,1,1]), [
+  rhythm.event("note", q, 0),
+  rhythm.event("note", q, 1),
+  rhythm.event("note", q, 2),
+  rhythm.event("note", q, 3)
+])
+
+let key = scale.make(c4, "Major", "Western")
+let mel = melody.make("cadence melody", [c4,d4,e4,f4], [q,q,q,q], key, rhy, null)
+
+let cmaj = chord.make(c4, "Major", 0, "close")
+let fmaj = chord.make(f4, "Major", 0, "close")
+let gmaj = chord.make(g4, "Major", 0, "close")
+let amin = chord.make(a4, "Minor", 0, "close")
+
+let authentic_prog = progression.make("V I", key, [
+  progression.state("V", gmaj, 1),
+  progression.state("I", cmaj, 1)
+], mel)
+
+let plagal_prog = progression.make("IV I", key, [
+  progression.state("IV", fmaj, 1),
+  progression.state("I", cmaj, 1)
+], mel)
+
+let half_prog = progression.make("I V", key, [
+  progression.state("I", cmaj, 1),
+  progression.state("V", gmaj, 1)
+], mel)
+
+let deceptive_prog = progression.make("V vi", key, [
+  progression.state("V", gmaj, 1),
+  progression.state("vi", amin, 1)
+], mel)
+
+test "classify_pair detects authentic cadence" {
+  cadences.classify_pair(progression.state("V", gmaj, 1), progression.state("I", cmaj, 1)).kind == "authentic"
+}
+
+test "classify_pair detects plagal cadence" {
+  cadences.classify_pair(progression.state("IV", fmaj, 1), progression.state("I", cmaj, 1)).kind == "plagal"
+}
+
+test "classify_pair detects half cadence" {
+  cadences.classify_pair(progression.state("I", cmaj, 1), progression.state("V", gmaj, 1)).kind == "half"
+}
+
+test "classify_pair detects deceptive cadence" {
+  cadences.classify_pair(progression.state("V", gmaj, 1), progression.state("vi", amin, 1)).kind == "deceptive"
+}
+
+test "classify_pair returns none for non-cadential motion" {
+  cadences.classify_pair(progression.state("I", cmaj, 1), progression.state("IV", fmaj, 1)).kind == "none"
+}
+
+test "cadences_in_progression extracts all cadential pairs" {
+  let prog = progression.make("I IV V I", key, [
+    progression.state("I", cmaj, 1),
+    progression.state("IV", fmaj, 1),
+    progression.state("V", gmaj, 1),
+    progression.state("I", cmaj, 1)
+  ], mel)
+  let cs = cadences.cadences_in_progression(prog)
+  list.len(cs) == 1 && cs[0].kind == "authentic" && cs[0].index == 2
+}
+
+test "terminal_cadence returns final cadence of progression" {
+  cadences.terminal_cadence(authentic_prog).kind == "authentic"
+}
+
+test "cadence_density counts cadences over transitions" {
+  let prog = progression.make("I IV V I", key, [
+    progression.state("I", cmaj, 1),
+    progression.state("IV", fmaj, 1),
+    progression.state("V", gmaj, 1),
+    progression.state("I", cmaj, 1)
+  ], mel)
+  let d = cadences.cadence_density(prog)
+  d.cadence_count == 1 && d.transition_count == 3
+}
+
+test "cadence_digest is deterministic" {
+  let c1 = cadences.classify_pair(progression.state("V", gmaj, 1), progression.state("I", cmaj, 1))
+  let c2 = cadences.classify_pair(progression.state("V", gmaj, 1), progression.state("I", cmaj, 1))
+  cadences.cadence_digest(c1) == cadences.cadence_digest(c2)
+}

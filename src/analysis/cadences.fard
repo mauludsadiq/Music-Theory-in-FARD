@@ -1,0 +1,42 @@
+import("std/list") as list
+import("../core/canon") as canon
+
+fn cadence_record(kind, index, from_rn, to_rn) {
+  { kind: kind, index: index, from: from_rn, to: to_rn }
+}
+
+fn classify_pair(a, b) {
+  if a.symbol == "V" && b.symbol == "I" then cadence_record("authentic", -1, a.symbol, b.symbol) else
+  if a.symbol == "IV" && b.symbol == "I" then cadence_record("plagal", -1, a.symbol, b.symbol) else
+  if b.symbol == "V" then cadence_record("half", -1, a.symbol, b.symbol) else
+  if a.symbol == "V" && b.symbol == "vi" then cadence_record("deceptive", -1, a.symbol, b.symbol) else
+  cadence_record("none", -1, a.symbol, b.symbol)
+}
+
+fn cadence_at(states, i) {
+  let c = classify_pair(states[i], states[i + 1]) in
+  { kind: c.kind, index: i, from: c.from, to: c.to }
+}
+
+fn cadences_in_progression(prog) {
+  let states = prog.states in
+  let n = list.len(states) in
+  if n < 2 then [] else
+  list.filter(list.map(list.range(0, n - 1), fn(i) { cadence_at(states, i) }), fn(c) { c.kind != "none" && c.kind != "half" })
+}
+
+fn terminal_cadence(prog) {
+  let cs = cadences_in_progression(prog) in
+  if list.len(cs) == 0 then cadence_record("none", -1, "", "") else list.last(cs)
+}
+
+fn cadence_density(prog) {
+  let n = list.len(prog.states) in
+  let transitions = if n < 2 then 0 else n - 1 in
+  let cs = cadences_in_progression(prog) in
+  { cadence_count: list.len(cs), transition_count: transitions }
+}
+
+fn cadence_digest(c) { canon.digest_value(c) }
+
+export { classify_pair, cadences_in_progression, terminal_cadence, cadence_density, cadence_digest }
