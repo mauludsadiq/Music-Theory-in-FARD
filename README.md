@@ -38,6 +38,11 @@ src/layers/melody.fard       Layer 6 -- note events, contour, motive windows, in
 src/layers/progression.fard  Layer 7 -- Roman numeral analysis, cadence detection, secondary dominants
 src/layers/piece.fard        Layer 8 -- sections, instrumentation, form analysis
 src/tower.fard               full digest tower and exports
+src/analysis/engine.fard     unified analysis engine -- motive, cadence, and style analysis
+src/analysis/motives.fard    motive window extraction, repetition detection, section mapping
+src/analysis/cadences.fard   cadence classification from certified chord data
+src/analysis/style.fard      rhythm/contour/cadence/harmony histograms, style fingerprinting
+src/query/search.fard        query engine -- reads only certified analysis output
 tests/test_*.fard            layer-spec and tower-behavior tests
 tests/diagnostics/diag_*.fard  meta-property audit probes (determinism, inversion sanity, validation bypass resistance, labeling honesty)
 ```
@@ -52,6 +57,11 @@ Layers 6, 7, and 8 have been expanded using a red-test-first discipline:
 - Layer 7 (Progression): Roman numeral derivation from scale-degree position, cadence classification (authentic, plagal, half, deceptive), secondary dominant detection
 - Layer 8 (Piece): certified sections, timeline construction, overlap detection, material-reference validation, form fingerprints, deterministic form digests
 
+Above the tower sits an analysis and query pipeline that consumes certified layer output without inventing new lower-layer truth -- the architecture is Tower -> Analysis -> Query:
+
+- Analysis Engine (src/analysis/): motive extraction and repetition detection, cadence classification derived from certified chord/scale data (not caller-supplied labels), and style fingerprinting across rhythm, contour, cadence, and harmonic function
+- Query Engine (src/query/search.fard): reads only the certified output of analysis.engine.analyze_piece -- it never re-analyzes the tower directly
+
 ## Run
 
 From this directory.
@@ -63,6 +73,9 @@ fardrun test --program tests/test_tower.fard
 fardrun test --program tests/test_negative.fard
 fardrun test --program tests/test_melody.fard
 fardrun test --program tests/test_progression.fard
+fardrun test --program tests/test_piece.fard
+fardrun test --program tests/test_analysis_engine.fard
+fardrun test --program tests/test_query_search.fard
 ```
 
 Run a program and capture its digest, trace, and module graph:
