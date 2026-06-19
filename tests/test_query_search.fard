@@ -1,0 +1,93 @@
+import("std/list") as list
+import("std/rec") as rec
+import("../src/layers/note") as note
+import("../src/layers/chord") as chord
+import("../src/layers/scale") as scale
+import("../src/layers/rhythm") as rhythm
+import("../src/layers/melody") as melody
+import("../src/layers/progression") as progression
+import("../src/layers/piece") as piece
+import("../src/analysis/engine") as engine
+import("../src/query/search") as search
+import("../src/core/validate") as v
+
+let c4 = note.make("C", 4, 0.0, "12-TET-A440")
+let d4 = note.make("D", 4, 0.0, "12-TET-A440")
+let e4 = note.make("E", 4, 0.0, "12-TET-A440")
+let f4 = note.make("F", 4, 0.0, "12-TET-A440")
+let g4 = note.make("G", 4, 0.0, "12-TET-A440")
+let a4 = note.make("A", 4, 0.0, "12-TET-A440")
+
+let key = scale.make(c4, "Major", "Western")
+let q = rhythm.duration("quarter", 1, 4, 0)
+let rhy = rhythm.pattern("common", rhythm.meter(4, 4, [1,1,1,1]), [rhythm.event("note", q, 0), rhythm.event("note", q, 1), rhythm.event("note", q, 2), rhythm.event("note", q, 3)])
+let mel = melody.make("cell", [c4,d4,e4,c4], [q,q,q,q], key, rhy, null)
+
+let cmaj = chord.make(c4, "Major", 0, "close")
+let fmaj = chord.make(f4, "Major", 0, "close")
+let gmaj = chord.make(g4, "Major", 0, "close")
+let amin = chord.make(a4, "Minor", 0, "close")
+let prog = progression.make("I IV V I", key, [progression.state("I", cmaj, 1), progression.state("IV", fmaj, 1), progression.state("V", gmaj, 1), progression.state("I", cmaj, 1)], mel)
+
+let sec_a = piece.make_section("A", 0, 4, [0], [0], [0])
+let pc = piece.make("Query Test Piece", "binary", "homophonic", "didactic", "contemporary", ["piano"], [mel], [prog], [rhy], [sec_a])
+
+let analysis = engine.analyze_piece(key, pc, [mel], [prog], [rhy])
+
+test "find_cadences returns only cadences of the requested kind" {
+  let results = search.find_cadences(analysis, "authentic")
+  list.len(results) >= 1 && list.all(results, fn(c) { c.kind == "authentic" })
+}
+
+test "find_cadences returns empty list for a kind not present" {
+  let results = search.find_cadences(analysis, "deceptive")
+  list.len(results) == 0
+}
+
+test "find_terminal_cadences returns terminal cadence for each progression" {
+  let results = search.find_terminal_cadences(analysis, "authentic")
+  list.len(results) >= 1 && list.all(results, fn(c) { c.kind == "authentic" })
+}
+
+test "find_terminal_cadences returns empty list for a kind not present terminally" {
+  let results = search.find_terminal_cadences(analysis, "plagal")
+  list.len(results) == 0
+}
+
+test "find_motives_by_digest finds motives matching a known digest" {
+  let all_motives = analysis.motives.items
+  let target_digest = all_motives[0].digest
+  let results = search.find_motives_by_digest(analysis, target_digest)
+  list.len(results) >= 1 && list.all(results, fn(m) { m.digest == target_digest })
+}
+
+test "find_motives_by_digest returns empty list for an unknown digest" {
+  let results = search.find_motives_by_digest(analysis, "sha256:doesnotexist")
+  list.len(results) == 0
+}
+
+test "find_motives_in_section returns motives for a known section label" {
+  let results = search.find_motives_in_section(analysis, "A")
+  list.len(results) >= 1
+}
+
+test "find_motives_in_section returns empty list for an unknown section label" {
+  let results = search.find_motives_in_section(analysis, "Z")
+  list.len(results) == 0
+}
+
+test "find_repeated_motives returns the repeated motive summary" {
+  let results = search.find_repeated_motives(analysis)
+  results == analysis.motives.repeated
+}
+
+test "find_style_value returns a value from the style fingerprint by domain and key" {
+  let contour_hist = analysis.style.contour
+  let first_key = list.head(rec.keys(contour_hist))
+  let result = search.find_style_value(analysis, "contour", first_key)
+  v.is_ok(result) && result.v == rec.get(contour_hist, first_key)
+}
+
+test "find_style_value returns an error for an unknown domain" {
+  v.is_err(search.find_style_value(analysis, "nonexistent_domain", "x"))
+}
