@@ -1,0 +1,102 @@
+import("std/list") as list
+import("std/rec") as rec
+import("../core/canon") as canon
+import("../core/validate") as v
+
+fn validate_window_size(window_size, event_count) {
+  if window_size <= 0 then v.err("MOTIVE_BAD_WINDOW_SIZE", window_size) else
+  if window_size > event_count then v.err("MOTIVE_WINDOW_TOO_LARGE", { window_size: window_size, event_count: event_count }) else
+  v.ok(window_size)
+}
+
+fn window_digest(events) {
+  canon.digest_value(list.map(events, fn(e) {
+    { note_digest: canon.digest_value(e.note), duration_digest: canon.digest_value(e.duration) }
+  }))
+}
+
+fn make_motive(melody_index, start_index, events) {
+  {
+    melody_index: melody_index,
+    start_index: start_index,
+    event_count: list.len(events),
+    events: events,
+    digest: window_digest(events)
+  }
+}
+
+fn melody_motives(melody_index, mel, window_size) {
+  let events = mel.events in
+  let n = list.len(events) in
+  let checked = validate_window_size(window_size, n) in
+  if v.is_err(checked) then [] else
+  list.map(list.range(0, n - window_size + 1), fn(i) {
+    make_motive(melody_index, i, list.take(list.drop(events, i), window_size))
+  })
+}
+
+fn collect_motives(piece, melodies, window_size) {
+  list.flatten(list.map(list.range(0, list.len(melodies)), fn(i) {
+    melody_motives(i, melodies[i], window_size)
+  }))
+}
+
+fn digest_seen(ds, digest) {
+  list.any(ds, fn(d) { d == digest })
+}
+
+fn count_digest(ms, digest) {
+  list.len(list.filter(ms, fn(m) { m.digest == digest }))
+}
+
+fn first_motive_for_digest(ms, digest) {
+  list.find(ms, fn(m) { m.digest == digest }).some
+}
+
+fn repeated_motives(piece, melodies, window_size) {
+  let ms = collect_motives(piece, melodies, window_size) in
+  let digests = list.dedupe(list.map(ms, fn(m) { m.digest })) in
+  list.filter(list.map(digests, fn(d) {
+    let first = first_motive_for_digest(ms, d) in
+    { digest: d, count: count_digest(ms, d), first: first }
+  }), fn(r) { r.count > 1 })
+}
+
+fn section_for_melody(piece, melody_index) {
+  list.find(piece.sections, fn(s) {
+    list.any(s.melody_indices, fn(i) { i == melody_index })
+  })
+}
+
+fn add_motive_to_section(acc, motive) {
+  let found = section_for_melody(acc.piece, motive.melody_index) in
+  if rec.has(found, "some") then
+    let label = found.some.label in
+    let existing = rec.getOr(acc.map, label, []) in
+    { piece: acc.piece, map: rec.set(acc.map, label, list.append(existing, motive)) }
+  else
+    acc
+}
+
+fn section_motive_map(piece, melodies, window_size) {
+  let ms = collect_motives(piece, melodies, window_size) in
+  list.fold(ms, { piece: piece, map: {} }, add_motive_to_section).map
+}
+
+fn motive_density(piece, melodies, window_size) {
+  let ms = collect_motives(piece, melodies, window_size) in
+  let reps = repeated_motives(piece, melodies, window_size) in
+  {
+    total_motives: list.len(ms),
+    repeated_motive_classes: list.len(reps),
+    repeated_motive_instances: list.fold(reps, 0, fn(acc, r) { acc + r.count })
+  }
+}
+
+export {
+  validate_window_size,
+  collect_motives,
+  repeated_motives,
+  section_motive_map,
+  motive_density
+}

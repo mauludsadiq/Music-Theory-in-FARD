@@ -1,0 +1,104 @@
+import("std/list") as list
+import("std/rec") as rec
+
+import("../src/layers/note") as note
+import("../src/layers/scale") as scale
+import("../src/layers/rhythm") as rhythm
+import("../src/layers/melody") as melody
+import("../src/layers/chord") as chord
+import("../src/layers/progression") as progression
+import("../src/layers/piece") as piece
+import("../src/analysis/motives") as motives
+import("../src/core/validate") as v
+
+let c4 = note.make("C", 4, 0.0, "12-TET-A440")
+let d4 = note.make("D", 4, 0.0, "12-TET-A440")
+let e4 = note.make("E", 4, 0.0, "12-TET-A440")
+let f4 = note.make("F", 4, 0.0, "12-TET-A440")
+let g4 = note.make("G", 4, 0.0, "12-TET-A440")
+
+let q = rhythm.duration("quarter", 1, 4, 0)
+let meter44 = rhythm.meter(4, 4, [1,1,1,1])
+let rhy = rhythm.pattern("common", meter44, [
+  rhythm.event("note", q, 0),
+  rhythm.event("note", q, 1),
+  rhythm.event("note", q, 2),
+  rhythm.event("note", q, 3)
+])
+
+let key = scale.make(c4, "Major", "Western")
+
+let mel_a = melody.make("A melody", [c4,d4,e4,c4,d4,e4], [q,q,q,q,q,q], key, rhy, null)
+let mel_b = melody.make("B melody", [g4,f4,e4,g4,f4,e4], [q,q,q,q,q,q], key, rhy, null)
+
+let cmaj = chord.make(c4, "Major", 0, "close")
+let fmaj = chord.make(f4, "Major", 0, "close")
+let gmaj = chord.make(g4, "Major", 0, "close")
+
+let prog = progression.make(
+  "I IV V I",
+  key,
+  [
+    progression.state("I", cmaj, 1),
+    progression.state("IV", fmaj, 1),
+    progression.state("V", gmaj, 1),
+    progression.state("I", cmaj, 1)
+  ],
+  mel_a
+)
+
+let sec_a = piece.make_section("A", 0, 6, [0], [0], [0])
+let sec_b = piece.make_section("B", 6, 12, [1], [0], [0])
+let pc = piece.make("Motivic Test Piece", "binary", "homophonic", "didactic", "contemporary", ["piano"], [mel_a, mel_b], [prog], [rhy], [sec_a, sec_b])
+
+test "collect_motives extracts fixed-size windows from every melody in a piece" {
+  let ms = motives.collect_motives(pc, [mel_a, mel_b], 3)
+  list.len(ms) == 8
+}
+
+test "collect_motives preserves melody index and local start index" {
+  let ms = motives.collect_motives(pc, [mel_a, mel_b], 3)
+  ms[0].melody_index == 0 && ms[0].start_index == 0 && ms[4].melody_index == 1 && ms[4].start_index == 0
+}
+
+test "collect_motives rejects zero window size" {
+  v.is_err(motives.validate_window_size(0, 6))
+}
+
+test "collect_motives rejects window larger than melody" {
+  v.is_err(motives.validate_window_size(7, 6))
+}
+
+test "motive identity is deterministic for identical pitch-duration windows" {
+  let ms1 = motives.collect_motives(pc, [mel_a], 3)
+  let ms2 = motives.collect_motives(pc, [mel_a], 3)
+  ms1[0].digest == ms2[0].digest
+}
+
+test "repeated_motives detects repeated three-note cell inside one melody" {
+  let reps = motives.repeated_motives(pc, [mel_a], 3)
+  list.len(reps) == 1 && reps[0].count == 2
+}
+
+test "repeated_motives distinguishes different pitch cells" {
+  let reps = motives.repeated_motives(pc, [mel_b], 3)
+  list.len(reps) == 1 && reps[0].count == 2
+}
+
+test "section_motive_map attaches motives to section labels" {
+  let m = motives.section_motive_map(pc, [mel_a, mel_b], 3)
+  rec.has(m, "A") && rec.has(m, "B") && list.len(m.A) == 4 && list.len(m.B) == 4
+}
+
+test "motive_density reports repeated motives divided by total motives" {
+  let d = motives.motive_density(pc, [mel_a], 3)
+  d.total_motives == 4 && d.repeated_motive_classes == 1
+}
+
+test "cross-section repeated_motives can detect same cell appearing in multiple sections" {
+  let mel_c = melody.make("C melody", [c4,d4,e4,g4,f4,e4], [q,q,q,q,q,q], key, rhy, null)
+  let sec_c = piece.make_section("C", 12, 18, [2], [0], [0])
+  let pc2 = piece.make("Cross Section Motive", "ternary", "homophonic", "didactic", "contemporary", ["piano"], [mel_a, mel_b, mel_c], [prog], [rhy], [sec_a, sec_b, sec_c])
+  let reps = motives.repeated_motives(pc2, [mel_a, mel_b, mel_c], 3)
+  list.any(reps, fn(r) { r.count >= 2 })
+}
