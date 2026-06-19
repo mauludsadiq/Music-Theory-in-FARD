@@ -1,0 +1,113 @@
+import("std/list") as list
+import("../src/layers/note") as note
+import("../src/layers/chord") as chord
+import("../src/layers/scale") as scale
+import("../src/layers/rhythm") as rhythm
+import("../src/layers/melody") as melody
+import("../src/layers/progression") as progression
+import("../src/layers/piece") as piece
+import("../src/core/validate") as v
+
+let c4 = note.make("C", 4, 0.0, "12-TET-A440")
+let d4 = note.make("D", 4, 0.0, "12-TET-A440")
+let e4 = note.make("E", 4, 0.0, "12-TET-A440")
+let f4 = note.make("F", 4, 0.0, "12-TET-A440")
+let g4 = note.make("G", 4, 0.0, "12-TET-A440")
+
+let q = rhythm.duration("quarter", 1, 4, 0)
+let r = rhythm.pattern("common", rhythm.meter(4, 4, [1,1,1,1]), [rhythm.event("note", q, 0), rhythm.event("note", q, 1), rhythm.event("note", q, 2), rhythm.event("note", q, 3)])
+let key = scale.make(c4, "Major", "Western")
+let mel = melody.make("cell", [c4,g4,c4], [q,q,q], key, r, null)
+
+let cmaj = chord.make(c4, "Major", 0, "close")
+let fmaj = chord.make(f4, "Major", 0, "close")
+let gmaj = chord.make(g4, "Major", 0, "close")
+let prog = progression.make("I IV V I", key, [progression.state("I", cmaj, 1), progression.state("IV", fmaj, 1), progression.state("V", gmaj, 1), progression.state("I", cmaj, 1)], mel)
+
+test "piece.make and validate still work (existing behavior)" {
+  let pc = piece.make("Test Piece", "period", "homophonic", "didactic", "contemporary", ["piano"], [mel], [prog], [r], ["A"])
+  v.is_ok(piece.validate(pc))
+}
+
+test "make_section creates a certified section with bounds and label" {
+  let sec = piece.make_section("A", 0, 3, [0], [0], [0])
+  sec.label == "A" && sec.start_beat == 0 && sec.end_beat == 3 && sec.melody_indices == [0] && sec.progression_indices == [0] && sec.rhythm_indices == [0]
+}
+
+test "validate_section rejects end_beat before start_beat" {
+  let sec = piece.make_section("A", 5, 2, [0], [0], [0])
+  v.is_err(piece.validate_section(sec))
+}
+
+test "validate_section rejects negative start_beat" {
+  let sec = piece.make_section("A", -1, 3, [0], [0], [0])
+  v.is_err(piece.validate_section(sec))
+}
+
+test "validate_section rejects out-of-range melody index" {
+  let sec = piece.make_section("A", 0, 3, [5], [0], [0])
+  v.is_err(piece.validate_sections_against_materials([sec], [mel], [prog], [r]))
+}
+
+test "timeline orders sections chronologically by start_beat" {
+  let sec_b = piece.make_section("B", 4, 8, [0], [0], [0])
+  let sec_a = piece.make_section("A", 0, 4, [0], [0], [0])
+  let tl = piece.timeline([sec_b, sec_a])
+  tl[0].label == "A" && tl[1].label == "B"
+}
+
+test "timeline_total_beats sums across non-overlapping sections" {
+  let sec_a = piece.make_section("A", 0, 4, [0], [0], [0])
+  let sec_b = piece.make_section("B", 4, 9, [0], [0], [0])
+  piece.timeline_total_beats([sec_a, sec_b]) == 9
+}
+
+test "validate_timeline rejects overlapping sections" {
+  let sec_a = piece.make_section("A", 0, 5, [0], [0], [0])
+  let sec_b = piece.make_section("B", 3, 8, [0], [0], [0])
+  v.is_err(piece.validate_timeline([sec_a, sec_b]))
+}
+
+test "validate_timeline accepts adjacent non-overlapping sections" {
+  let sec_a = piece.make_section("A", 0, 4, [0], [0], [0])
+  let sec_b = piece.make_section("B", 4, 8, [0], [0], [0])
+  v.is_ok(piece.validate_timeline([sec_a, sec_b]))
+}
+
+test "form_fingerprint produces the section label sequence" {
+  let sec_a = piece.make_section("A", 0, 4, [0], [0], [0])
+  let sec_b = piece.make_section("B", 4, 8, [0], [0], [0])
+  let sec_a2 = piece.make_section("A", 8, 12, [0], [0], [0])
+  piece.form_fingerprint([sec_a, sec_b, sec_a2]) == ["A", "B", "A"]
+}
+
+test "form_fingerprint_digest is identical for identical section sequences" {
+  let sec_a = piece.make_section("A", 0, 4, [0], [0], [0])
+  let sec_b = piece.make_section("B", 4, 8, [0], [0], [0])
+  let fp1 = piece.form_fingerprint_digest([sec_a, sec_b])
+  let fp2 = piece.form_fingerprint_digest([sec_a, sec_b])
+  fp1 == fp2
+}
+
+test "form_fingerprint_digest changes when section order changes" {
+  let sec_a = piece.make_section("A", 0, 4, [0], [0], [0])
+  let sec_b = piece.make_section("B", 4, 8, [0], [0], [0])
+  let fp1 = piece.form_fingerprint_digest([sec_a, sec_b])
+  let fp2 = piece.form_fingerprint_digest([sec_b, sec_a])
+  fp1 != fp2
+}
+
+test "movement digest identical for identical piece content" {
+  let sec_a = piece.make_section("A", 0, 3, [0], [0], [0])
+  let pc1 = piece.make("Movement", "binary", "homophonic", "didactic", "contemporary", ["piano"], [mel], [prog], [r], [sec_a])
+  let pc2 = piece.make("Movement", "binary", "homophonic", "didactic", "contemporary", ["piano"], [mel], [prog], [r], [sec_a])
+  piece.digest(pc1) == piece.digest(pc2)
+}
+
+test "movement digest changes when form fingerprint changes" {
+  let sec_a = piece.make_section("A", 0, 3, [0], [0], [0])
+  let sec_b = piece.make_section("B", 3, 6, [0], [0], [0])
+  let pc1 = piece.make("Movement", "binary", "homophonic", "didactic", "contemporary", ["piano"], [mel], [prog], [r], [sec_a])
+  let pc2 = piece.make("Movement", "binary", "homophonic", "didactic", "contemporary", ["piano"], [mel], [prog], [r], [sec_a, sec_b])
+  piece.digest(pc1) != piece.digest(pc2)
+}
