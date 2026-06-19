@@ -10,7 +10,7 @@ let layer_name = "PROGRESSION"
 let schema_name = "HarmonicProgressionRecord"
 let rules_name = "HarmonicProgressionValidationRules"
 
-fn state(symbol, chord_record, beats) { { symbol: symbol, chord_digest: chord.digest(chord_record), chord_quality: chord_record.quality, root: chord_record.root, beats: beats } }
+fn state(symbol, chord_record, beats) { { symbol: symbol, chord_digest: chord.digest(chord_record), chord_quality: chord_record.quality, root: chord_record.root, root_digest: chord_record.root_digest, beats: beats } }
 fn root_motion(states) { list.map(list.range(1, list.len(states)), fn(i) { { from: states[i - 1].root, to: states[i].root } }) }
 
 let degree_numerals = ["I", "ii", "iii", "IV", "V", "vi", "vii"]
@@ -35,6 +35,25 @@ fn roman_numeral(key_scale, ch) {
   let idx = scale_degree_index(key_scale, ch.root_digest) in
   let base = degree_numerals[idx] in
   str.concat([numeral_case(base, ch.quality), seventh_suffix(ch.quality)])
+}
+
+fn numeral_for_state(key_scale, st) {
+  let idx = scale_degree_index(key_scale, st.root_digest) in
+  let base = degree_numerals[idx] in
+  numeral_case(base, st.chord_quality)
+}
+
+fn detect_cadence(key_scale, p) {
+  let n = list.len(p.states) in
+  if n < 1 then "none" else
+  let last_numeral = numeral_for_state(key_scale, p.states[n - 1]) in
+  if n < 2 then (if last_numeral == "V" then "half" else "none") else
+  let prev_numeral = numeral_for_state(key_scale, p.states[n - 2]) in
+  if prev_numeral == "V" && last_numeral == "I" then "authentic" else
+  if prev_numeral == "IV" && last_numeral == "I" then "plagal" else
+  if prev_numeral == "V" && last_numeral == "vi" then "deceptive" else
+  if last_numeral == "V" then "half" else
+  "none"
 }
 fn make(name, key_scale, states, melody_context) {
   {
@@ -65,4 +84,4 @@ fn certify(p) { canon.certify(layer_name, schema_name, rules_name, canon.digest_
 fn digest(p) { certify(p).object_digest }
 fn universe_digest() { canon.layer_digest(layer_name, canon.digest_value([chord.universe_digest(), scale.universe_digest(), melody.universe_digest()]), canon.digest_text(schema_name), canon.digest_text(rules_name), canon.digest_text("progression-sequence-rules")) }
 
-export { state, make, validate, certify, digest, universe_digest, roman_numeral }
+export { state, make, validate, certify, digest, universe_digest, roman_numeral, detect_cadence }
