@@ -11,7 +11,7 @@ fn validate_window_size(window_size, event_count) {
 
 fn window_digest(events) {
   canon.digest_value(list.map(events, fn(e) {
-    { note_digest: canon.digest_value(e.note), duration_digest: canon.digest_value(e.duration) }
+    { note_digest: e.note_digest, duration_digest: e.duration_digest }
   }))
 }
 
@@ -50,7 +50,8 @@ fn count_digest(ms, digest) {
 }
 
 fn first_motive_for_digest(ms, digest) {
-  list.find(ms, fn(m) { m.digest == digest }).some
+  let found = list.find(ms, fn(m) { m.digest == digest }) in
+  if rec.has(found, "some") then found.some else null
 }
 
 fn repeated_motives(piece, melodies, window_size) {
