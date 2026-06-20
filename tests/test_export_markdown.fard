@@ -20,3 +20,8 @@ test "professor_summary produces non-empty markdown with motive section" {
   let md = markdown.professor_summary(bach.pc, analysis, bach.key)
   str.contains(md, "**Motives**") && str.contains(md, "repeated motive classes")
 }
+
+test "cadence_sentence uses correct article for consonant-starting cadence kind" {
+  let bach_summary = markdown.student_summary(bach.pc, analysis, bach.key)
+  str.contains(bach_summary, "an authentic")
+}

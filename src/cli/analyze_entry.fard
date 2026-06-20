@@ -1,0 +1,27 @@
+import("std/cli") as cli
+import("std/str") as str
+import("std/list") as list
+import("std/rec") as rec
+import("../../corpus/twinkle") as twinkle
+import("../../corpus/bach_minuet_g") as bach
+import("../../corpus/amazing_grace") as grace
+import("../../corpus/greensleeves") as greensleeves
+import("../../corpus/ode_to_joy") as ode
+import("../../corpus/prelude_c_major") as prelude
+import("../../corpus/scarborough_fair") as scarborough
+import("./analyze") as analyze
+
+fn dispatch(name) {
+  if name == "twinkle" then analyze.run(twinkle.key, twinkle.pc, [twinkle.phrase_a, twinkle.phrase_b], [twinkle.prog], []) else
+  if name == "bach_minuet_g" then analyze.run(bach.key, bach.pc, [bach.phrase_a, bach.phrase_b], [bach.prog], []) else
+  if name == "amazing_grace" then analyze.run(grace.key, grace.pc, [grace.phrase_a, grace.phrase_b], [grace.prog], []) else
+  if name == "greensleeves" then analyze.run(greensleeves.key, greensleeves.pc, [greensleeves.phrase_a, greensleeves.phrase_b], [greensleeves.prog], []) else
+  if name == "ode_to_joy" then analyze.run(ode.key, ode.pc, [ode.phrase_a, ode.phrase_b, ode.phrase_c], [ode.prog], []) else
+  if name == "prelude_c_major" then analyze.run(prelude.key, prelude.pc, [prelude.top_notes_melody], [prelude.prog], []) else
+  if name == "scarborough_fair" then analyze.run(scarborough.key, scarborough.pc, [scarborough.phrase_a, scarborough.phrase_b], [scarborough.prog], []) else
+  { error: str.concat(["unknown piece: ", name]) }
+}
+
+let args = cli.args()
+let result = if list.len(args) < 1 then { error: "usage: analyze <piece-name>" } else dispatch(args[0])
+if rec.has(result, "error") then result.error else result.summary

@@ -2,9 +2,13 @@ import("std/list") as list
 import("std/str") as str
 import("./report") as report
 
+fn article_for(word) {
+  if str.starts_with(word, "a") || str.starts_with(word, "e") || str.starts_with(word, "i") || str.starts_with(word, "o") || str.starts_with(word, "u") then "an" else "a"
+}
+
 fn cadence_sentence(rep) {
   if rep.terminal_cadence == "none" then "It does not end on a clear cadence." else
-  str.concat(["It uses an ", rep.terminal_cadence, " cadence at the end."])
+  str.concat(["It uses ", article_for(rep.terminal_cadence), " ", rep.terminal_cadence, " cadence at the end."])
 }
 
 fn motive_sentence(rep) {
