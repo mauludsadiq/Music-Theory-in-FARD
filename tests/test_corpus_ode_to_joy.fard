@@ -1,0 +1,24 @@
+import("std/list") as list
+import("../corpus/ode_to_joy") as ode
+import("../src/layers/piece") as piece
+import("../src/analysis/engine") as engine
+import("../src/query/search") as search
+import("../src/core/validate") as v
+
+test "ode to joy piece validates" {
+  v.is_ok(piece.validate(ode.pc))
+}
+
+test "ode to joy form is A B A" {
+  ode.pc.sections[0].label == "A" && ode.pc.sections[1].label == "B" && ode.pc.sections[2].label == "A"
+}
+
+test "ode to joy form_fingerprint reflects ternary structure" {
+  piece.form_fingerprint(ode.pc.sections) == ["A", "B", "A"]
+}
+
+test "ode to joy ends on an authentic cadence" {
+  let analysis = engine.analyze_piece(ode.key, ode.pc, [ode.phrase_a, ode.phrase_b, ode.phrase_c], [ode.prog], [])
+  let terminal = search.find_terminal_cadences(analysis, "authentic")
+  list.len(terminal) >= 1
+}
