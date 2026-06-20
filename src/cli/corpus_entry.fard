@@ -1,0 +1,57 @@
+import("std/cli") as cli
+import("std/str") as str
+import("std/list") as list
+import("../../corpus/twinkle") as twinkle
+import("../../corpus/bach_minuet_g") as bach
+import("../../corpus/amazing_grace") as grace
+import("../../corpus/greensleeves") as greensleeves
+import("../../corpus/ode_to_joy") as ode
+import("../../corpus/prelude_c_major") as prelude
+import("../../corpus/scarborough_fair") as scarborough
+import("../analysis/engine") as engine
+import("../corpus/corpus") as corpus_mod
+import("./corpus") as corpus_cli
+
+fn analysis_for(name) {
+  if name == "twinkle" then engine.analyze_piece(twinkle.key, twinkle.pc, [twinkle.phrase_a, twinkle.phrase_b], [twinkle.prog], []) else
+  if name == "bach_minuet_g" then engine.analyze_piece(bach.key, bach.pc, [bach.phrase_a, bach.phrase_b], [bach.prog], []) else
+  if name == "amazing_grace" then engine.analyze_piece(grace.key, grace.pc, [grace.phrase_a, grace.phrase_b], [grace.prog], []) else
+  if name == "greensleeves" then engine.analyze_piece(greensleeves.key, greensleeves.pc, [greensleeves.phrase_a, greensleeves.phrase_b], [greensleeves.prog], []) else
+  if name == "ode_to_joy" then engine.analyze_piece(ode.key, ode.pc, [ode.phrase_a, ode.phrase_b, ode.phrase_c], [ode.prog], []) else
+  if name == "prelude_c_major" then engine.analyze_piece(prelude.key, prelude.pc, [prelude.top_notes_melody], [prelude.prog], []) else
+  if name == "scarborough_fair" then engine.analyze_piece(scarborough.key, scarborough.pc, [scarborough.phrase_a, scarborough.phrase_b], [scarborough.prog], []) else
+  null
+}
+
+let names = ["twinkle", "bach_minuet_g", "amazing_grace", "greensleeves", "ode_to_joy", "prelude_c_major", "scarborough_fair"]
+let pieces = [twinkle.pc, bach.pc, grace.pc, greensleeves.pc, ode.pc, prelude.pc, scarborough.pc]
+let analyses = list.map(names, fn(n) { analysis_for(n) })
+let full_corpus = corpus_mod.make("MTIF Reference Corpus", pieces, analyses)
+
+fn run_list() {
+  let s = corpus_cli.summary(full_corpus) in
+  str.concat([s.name, " (", str.from(s.piece_count), " pieces): ", str.join(s.titles, ", ")])
+}
+
+fn run_rank(target_name) {
+  let target_analysis = analysis_for(target_name) in
+  let idx = list.find_index(names, fn(n) { n == target_name }) in
+  if idx < 0 then str.concat(["unknown piece: ", target_name]) else
+  let other_indices = list.filter(list.range(0, list.len(names)), fn(i) { i != idx }) in
+  let other_pieces = list.map(other_indices, fn(i) { pieces[i] }) in
+  let other_analyses = list.map(other_indices, fn(i) { analyses[i] }) in
+  let rest_corpus = corpus_mod.make("Rest", other_pieces, other_analyses) in
+  let ranked = corpus_cli.rank(target_analysis, rest_corpus) in
+  let lines = list.map(ranked, fn(r) { str.concat([r.title, ": ", str.from(r.similarity.total)]) }) in
+  str.join(lines, "\n")
+}
+
+let args = cli.args()
+let sub = if list.len(args) < 1 then "" else args[0]
+
+let result =
+  if sub == "list" then run_list() else
+  if sub == "rank" then (if list.len(args) < 2 then "usage: corpus rank <piece>" else run_rank(args[1])) else
+  "usage: corpus <list|rank> [piece]"
+
+result

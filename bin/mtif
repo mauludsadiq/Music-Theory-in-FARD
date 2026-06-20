@@ -16,12 +16,25 @@ case "$cmd" in
     fardrun run --program "$SCRIPT_DIR/src/cli/compare_entry.fard" --out "$OUT_DIR" -- "$@" >/dev/null
     python3 -c "import json; print(json.load(open('$OUT_DIR/result.json'))['result'])"
     ;;
+  query)
+    fardrun run --program "$SCRIPT_DIR/src/cli/query_entry.fard" --out "$OUT_DIR" -- "$@" >/dev/null
+    python3 -c "import json; print(json.load(open('$OUT_DIR/result.json'))['result'])"
+    ;;
+  corpus)
+    fardrun run --program "$SCRIPT_DIR/src/cli/corpus_entry.fard" --out "$OUT_DIR" -- "$@" >/dev/null
+    python3 -c "import json; print(json.load(open('$OUT_DIR/result.json'))['result'])"
+    ;;
   *)
     echo "Usage: mtif <command> [args]"
     echo ""
     echo "Commands:"
     echo "  analyze <piece-name>              Analyze a corpus piece and print a student summary"
     echo "  compare <piece-a> <piece-b>       Compare two pieces by style/motive/cadence similarity"
+    echo "  query <subcommand> <piece> [...] Ask questions over a piece's analysis"
+    echo "    cadences <piece> <kind>"
+    echo "    motives-in-section <piece> <label>"
+    echo "    repeated-motives <piece>"
+    echo "    style-value <piece> <domain> <key>"
     echo ""
     echo "Available pieces: twinkle, bach_minuet_g, amazing_grace, greensleeves, ode_to_joy, prelude_c_major, scarborough_fair"
     exit 1

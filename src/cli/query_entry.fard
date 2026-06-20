@@ -1,0 +1,63 @@
+import("std/cli") as cli
+import("std/str") as str
+import("std/list") as list
+import("std/rec") as rec
+import("../../corpus/twinkle") as twinkle
+import("../../corpus/bach_minuet_g") as bach
+import("../../corpus/amazing_grace") as grace
+import("../../corpus/greensleeves") as greensleeves
+import("../../corpus/ode_to_joy") as ode
+import("../../corpus/prelude_c_major") as prelude
+import("../../corpus/scarborough_fair") as scarborough
+import("../analysis/engine") as engine
+import("./query") as query_cli
+
+fn analysis_for(name) {
+  if name == "twinkle" then engine.analyze_piece(twinkle.key, twinkle.pc, [twinkle.phrase_a, twinkle.phrase_b], [twinkle.prog], []) else
+  if name == "bach_minuet_g" then engine.analyze_piece(bach.key, bach.pc, [bach.phrase_a, bach.phrase_b], [bach.prog], []) else
+  if name == "amazing_grace" then engine.analyze_piece(grace.key, grace.pc, [grace.phrase_a, grace.phrase_b], [grace.prog], []) else
+  if name == "greensleeves" then engine.analyze_piece(greensleeves.key, greensleeves.pc, [greensleeves.phrase_a, greensleeves.phrase_b], [greensleeves.prog], []) else
+  if name == "ode_to_joy" then engine.analyze_piece(ode.key, ode.pc, [ode.phrase_a, ode.phrase_b, ode.phrase_c], [ode.prog], []) else
+  if name == "prelude_c_major" then engine.analyze_piece(prelude.key, prelude.pc, [prelude.top_notes_melody], [prelude.prog], []) else
+  if name == "scarborough_fair" then engine.analyze_piece(scarborough.key, scarborough.pc, [scarborough.phrase_a, scarborough.phrase_b], [scarborough.prog], []) else
+  null
+
+}
+
+fn run_cadences(args) {
+  let analysis = analysis_for(args[0]) in
+  let results = query_cli.cadences(analysis, args[1]) in
+  str.concat([str.from(list.len(results)), " ", args[1], " cadence(s) found"])
+}
+
+fn run_motives_in_section(args) {
+  let analysis = analysis_for(args[0]) in
+  let results = query_cli.motives_in_section(analysis, args[1]) in
+  str.concat([str.from(list.len(results)), " motive(s) found in section ", args[1]])
+}
+
+fn run_repeated_motives(args) {
+  let analysis = analysis_for(args[0]) in
+  let results = query_cli.repeated_motives(analysis) in
+  str.concat([str.from(list.len(results)), " repeated motive class(es) found"])
+}
+
+fn run_style_value(args) {
+  let analysis = analysis_for(args[0]) in
+  let result = query_cli.style_value(analysis, args[1], args[2]) in
+  if rec.has(result, "t") && result.t == "ok" then str.concat([args[1], ".", args[2], " = ", str.from(result.v)]) else
+  str.concat(["error: ", result.code])
+}
+
+let args = cli.args()
+let sub = if list.len(args) < 1 then "" else args[0]
+let rest = list.drop(args, 1)
+
+let result =
+  if sub == "cadences" then run_cadences(rest) else
+  if sub == "motives-in-section" then run_motives_in_section(rest) else
+  if sub == "repeated-motives" then run_repeated_motives(rest) else
+  if sub == "style-value" then run_style_value(rest) else
+  "usage: query <cadences|motives-in-section|repeated-motives|style-value> <piece> [args]"
+
+result
