@@ -1,0 +1,67 @@
+import("../src/layers/note") as note
+import("../src/layers/chord") as chord
+import("../src/layers/scale") as scale
+import("../src/layers/rhythm") as rhythm
+import("../src/layers/melody") as melody
+import("../src/layers/progression") as progression
+import("../src/layers/piece") as piece
+
+let a3 = note.make("A", 3, 0.0, "12-TET-A440")
+let b3 = note.make("B", 3, 0.0, "12-TET-A440")
+let c4 = note.make("C", 4, 0.0, "12-TET-A440")
+let d4 = note.make("D", 4, 0.0, "12-TET-A440")
+let e4 = note.make("E", 4, 0.0, "12-TET-A440")
+let g3 = note.make("G", 3, 0.0, "12-TET-A440")
+
+let key = scale.make(a3, "Dorian", "Western")
+let q = rhythm.duration("quarter", 1, 4, 0)
+
+let phrase_a_notes = [a3, g3, a3, c4, b3, a3, g3, e4]
+let phrase_a_durations = [q, q, q, q, q, q, q, q]
+let phrase_a_meter = rhythm.meter(8, 4, [1,1,1,1,1,1,1,1])
+let phrase_a_rhythm = rhythm.pattern("scarborough-a", phrase_a_meter, [
+  rhythm.event("note", q, 0), rhythm.event("note", q, 1), rhythm.event("note", q, 2), rhythm.event("note", q, 3),
+  rhythm.event("note", q, 4), rhythm.event("note", q, 5), rhythm.event("note", q, 6), rhythm.event("note", q, 7)
+])
+let phrase_a = melody.make("scarborough-phrase-a", phrase_a_notes, phrase_a_durations, key, phrase_a_rhythm, null)
+
+let phrase_b_notes = [a3, g3, a3, c4, d4, c4, b3, a3]
+let phrase_b_durations = [q, q, q, q, q, q, q, q]
+let phrase_b_meter = rhythm.meter(8, 4, [1,1,1,1,1,1,1,1])
+let phrase_b_rhythm = rhythm.pattern("scarborough-b", phrase_b_meter, [
+  rhythm.event("note", q, 0), rhythm.event("note", q, 1), rhythm.event("note", q, 2), rhythm.event("note", q, 3),
+  rhythm.event("note", q, 4), rhythm.event("note", q, 5), rhythm.event("note", q, 6), rhythm.event("note", q, 7)
+])
+let phrase_b = melody.make("scarborough-phrase-b", phrase_b_notes, phrase_b_durations, key, phrase_b_rhythm, null)
+
+let amin = chord.make(a3, "Minor", 0, "close")
+let g4 = note.make("G", 4, 0.0, "12-TET-A440")
+let gmaj = chord.make(g4, "Major", 0, "close")
+
+let prog = progression.make("i VII i VII i", key,
+  [
+    progression.state("i", amin, 3),
+    progression.state("VII", gmaj, 2),
+    progression.state("i", amin, 2),
+    progression.state("VII", gmaj, 2),
+    progression.state("i", amin, 2)
+  ],
+  phrase_a)
+
+let sec_a = piece.make_section("A", 0, 8, [0], [0], [0])
+let sec_b = piece.make_section("B", 8, 16, [1], [0], [1])
+
+let pc = piece.make(
+  "Scarborough Fair",
+  "binary",
+  "monophonic",
+  "ballad",
+  "traditional",
+  ["voice", "guitar"],
+  [phrase_a, phrase_b],
+  [prog],
+  [phrase_a_rhythm, phrase_b_rhythm],
+  [sec_a, sec_b]
+)
+
+export { key, phrase_a, phrase_b, prog, pc }

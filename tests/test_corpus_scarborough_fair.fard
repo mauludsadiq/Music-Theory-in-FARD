@@ -1,0 +1,18 @@
+import("std/list") as list
+import("../corpus/scarborough_fair") as scarborough
+import("../src/layers/piece") as piece
+import("../src/analysis/engine") as engine
+import("../src/core/validate") as v
+
+test "scarborough fair piece validates" {
+  v.is_ok(piece.validate(scarborough.pc))
+}
+
+test "scarborough fair form is A B" {
+  scarborough.pc.sections[0].label == "A" && scarborough.pc.sections[1].label == "B"
+}
+
+test "scarborough fair has a repeated A-G-A opening motive across both phrases" {
+  let analysis = engine.analyze_piece(scarborough.key, scarborough.pc, [scarborough.phrase_a, scarborough.phrase_b], [scarborough.prog], [])
+  list.len(analysis.motives.repeated) >= 1
+}
