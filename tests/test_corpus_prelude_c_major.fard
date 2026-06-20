@@ -1,0 +1,23 @@
+import("std/list") as list
+import("../corpus/prelude_c_major") as prelude
+import("../src/layers/piece") as piece
+import("../src/layers/progression") as progression
+import("../src/core/validate") as v
+
+test "prelude piece validates" {
+  v.is_ok(piece.validate(prelude.pc))
+}
+
+test "prelude progression has 8 harmonic states" {
+  list.len(prelude.prog.states) == 8
+}
+
+test "prelude contains a secondary dominant (V7/V resolving to V)" {
+  let secondaries = progression.detect_secondary_dominants(prelude.key, prelude.prog)
+  list.len(secondaries) >= 1
+}
+
+test "prelude has higher cadence density than a simple folk progression" {
+  let n = list.len(prelude.prog.states) in
+  n - 1 == 7
+}

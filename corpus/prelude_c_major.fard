@@ -1,0 +1,62 @@
+import("../src/layers/note") as note
+import("../src/layers/chord") as chord
+import("../src/layers/scale") as scale
+import("../src/layers/rhythm") as rhythm
+import("../src/layers/melody") as melody
+import("../src/layers/progression") as progression
+import("../src/layers/piece") as piece
+
+let c4 = note.make("C", 4, 0.0, "12-TET-A440")
+let d4 = note.make("D", 4, 0.0, "12-TET-A440")
+let e4 = note.make("E", 4, 0.0, "12-TET-A440")
+let g4 = note.make("G", 4, 0.0, "12-TET-A440")
+let a4 = note.make("A", 4, 0.0, "12-TET-A440")
+
+let key = scale.make(c4, "Major", "Western")
+let whole = rhythm.duration("whole", 1, 1, 0)
+
+let top_notes_notes = [e4, d4, d4, e4, c4, a4, g4, g4]
+let top_notes_durations = [whole, whole, whole, whole, whole, whole, whole, whole]
+let meter8 = rhythm.meter(8, 1, [1,1,1,1,1,1,1,1])
+let top_rhythm = rhythm.pattern("prelude-top-notes", meter8, [
+  rhythm.event("note", whole, 0), rhythm.event("note", whole, 1), rhythm.event("note", whole, 2), rhythm.event("note", whole, 3),
+  rhythm.event("note", whole, 4), rhythm.event("note", whole, 5), rhythm.event("note", whole, 6), rhythm.event("note", whole, 7)
+])
+let top_notes_melody = melody.make("prelude-top-voice", top_notes_notes, top_notes_durations, key, top_rhythm, null)
+
+let cmaj = chord.make(c4, "Major", 0, "open")
+let dmin7 = chord.make(d4, "Minor7", 0, "open")
+let g7 = chord.make(g4, "Dominant7", 0, "open")
+let amin7 = chord.make(a4, "Minor7", 0, "open")
+let d7 = chord.make(d4, "Dominant7", 0, "open")
+let gmaj = chord.make(g4, "Major", 0, "open")
+
+let prog = progression.make("I ii7 V7 I vi7 V7/V V V7", key,
+  [
+    progression.state("I", cmaj, 4),
+    progression.state("ii7", dmin7, 4),
+    progression.state("V7", g7, 4),
+    progression.state("I", cmaj, 4),
+    progression.state("vi7", amin7, 4),
+    progression.state("V7/V", d7, 4),
+    progression.state("V", gmaj, 4),
+    progression.state("V7", g7, 4)
+  ],
+  top_notes_melody)
+
+let sec_a = piece.make_section("A", 0, 8, [0], [0], [0])
+
+let pc = piece.make(
+  "Prelude in C Major (BWV 846, opening 8 measures)",
+  "through-composed",
+  "arpeggiated",
+  "prelude",
+  "baroque",
+  ["harpsichord", "piano"],
+  [top_notes_melody],
+  [prog],
+  [top_rhythm],
+  [sec_a]
+)
+
+export { key, top_notes_melody, prog, pc }
