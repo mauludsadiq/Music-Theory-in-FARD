@@ -1,0 +1,47 @@
+import("std/list") as list
+import("../corpus/twinkle") as twinkle
+import("../corpus/bach_minuet_g") as bach
+import("../corpus/amazing_grace") as grace
+import("../corpus/greensleeves") as greensleeves
+import("../corpus/ode_to_joy") as ode
+import("../corpus/prelude_c_major") as prelude
+import("../corpus/scarborough_fair") as scarborough
+import("../src/analysis/engine") as engine
+import("../src/corpus/corpus") as corpus_mod
+import("../src/cli/corpus") as cli_corpus
+import("../src/core/validate") as v
+
+let twinkle_analysis = engine.analyze_piece(twinkle.key, twinkle.pc, [twinkle.phrase_a, twinkle.phrase_b], [twinkle.prog], [])
+let bach_analysis = engine.analyze_piece(bach.key, bach.pc, [bach.phrase_a, bach.phrase_b], [bach.prog], [])
+let grace_analysis = engine.analyze_piece(grace.key, grace.pc, [grace.phrase_a, grace.phrase_b], [grace.prog], [])
+let greensleeves_analysis = engine.analyze_piece(greensleeves.key, greensleeves.pc, [greensleeves.phrase_a, greensleeves.phrase_b], [greensleeves.prog], [])
+let ode_analysis = engine.analyze_piece(ode.key, ode.pc, [ode.phrase_a, ode.phrase_b, ode.phrase_c], [ode.prog], [])
+let prelude_analysis = engine.analyze_piece(prelude.key, prelude.pc, [prelude.top_notes_melody], [prelude.prog], [])
+let scarborough_analysis = engine.analyze_piece(scarborough.key, scarborough.pc, [scarborough.phrase_a, scarborough.phrase_b], [scarborough.prog], [])
+
+let other_pieces = [twinkle.pc, bach.pc, grace.pc, ode.pc, prelude.pc, scarborough.pc]
+let other_analyses = [twinkle_analysis, bach_analysis, grace_analysis, ode_analysis, prelude_analysis, scarborough_analysis]
+let rest_corpus = corpus_mod.make("Rest of Corpus", other_pieces, other_analyses)
+
+let full_corpus = corpus_mod.make("MTIF Reference Corpus",
+  [twinkle.pc, bach.pc, grace.pc, greensleeves.pc, ode.pc, prelude.pc, scarborough.pc],
+  [twinkle_analysis, bach_analysis, grace_analysis, greensleeves_analysis, ode_analysis, prelude_analysis, scarborough_analysis])
+
+test "full reference corpus of 7 pieces validates" {
+  v.is_ok(corpus_mod.validate(full_corpus)) && full_corpus.piece_count == 7
+}
+
+test "Scarborough Fair ranks #1 by similarity against Greensleeves (both Dorian)" {
+  let ranked = cli_corpus.rank(greensleeves_analysis, rest_corpus)
+  ranked[0].title == "Scarborough Fair"
+}
+
+test "Scarborough Fair vs Greensleeves cadence similarity is a perfect match" {
+  let ranked = cli_corpus.rank(greensleeves_analysis, rest_corpus)
+  ranked[0].similarity.cadence == 1.0
+}
+
+test "Scarborough Fair vs Greensleeves total similarity exceeds 0.7" {
+  let ranked = cli_corpus.rank(greensleeves_analysis, rest_corpus)
+  ranked[0].similarity.total > 0.7
+}
