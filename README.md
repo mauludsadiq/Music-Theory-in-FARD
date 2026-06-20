@@ -91,6 +91,15 @@ A real-repertoire corpus of 7 works lives under corpus/, spanning folk, Baroque,
 
 Every piece's form, terminal cadence, and motivic repetition have been verified against the actual music. The corpus also demonstrates genuine cross-piece musicological reasoning: ranking Greensleeves against the other six pieces by total similarity (style + motive + cadence) correctly puts Scarborough Fair first by a wide margin (0.75 vs. 0.24 for the next closest), with a perfect 1.0 cadence-similarity score -- both pieces share identical Dorian i-VII-i cadential motion, discovered purely from certified structural analysis with no hardcoded rule about modal similarity.
 
+## Quickstart
+
+```sh
+./bin/mtif analyze bach_minuet_g
+./bin/mtif compare greensleeves scarborough_fair
+```
+
+No JSON, no fardrun flags -- bin/mtif wraps fardrun run --program ... --out ... -- under the hood and prints the result directly. Available corpus pieces: twinkle, bach_minuet_g, amazing_grace, greensleeves, ode_to_joy, prelude_c_major, scarborough_fair.
+
 ## Run
 
 From this directory.
