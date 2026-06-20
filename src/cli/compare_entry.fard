@@ -1,0 +1,52 @@
+import("std/cli") as cli
+import("std/str") as str
+import("std/list") as list
+import("std/rec") as rec
+import("../../corpus/twinkle") as twinkle
+import("../../corpus/bach_minuet_g") as bach
+import("../../corpus/amazing_grace") as grace
+import("../../corpus/greensleeves") as greensleeves
+import("../../corpus/ode_to_joy") as ode
+import("../../corpus/prelude_c_major") as prelude
+import("../../corpus/scarborough_fair") as scarborough
+import("../analysis/engine") as engine
+import("./compare") as compare_cli
+
+fn analysis_for(name) {
+  if name == "twinkle" then engine.analyze_piece(twinkle.key, twinkle.pc, [twinkle.phrase_a, twinkle.phrase_b], [twinkle.prog], []) else
+  if name == "bach_minuet_g" then engine.analyze_piece(bach.key, bach.pc, [bach.phrase_a, bach.phrase_b], [bach.prog], []) else
+  if name == "amazing_grace" then engine.analyze_piece(grace.key, grace.pc, [grace.phrase_a, grace.phrase_b], [grace.prog], []) else
+  if name == "greensleeves" then engine.analyze_piece(greensleeves.key, greensleeves.pc, [greensleeves.phrase_a, greensleeves.phrase_b], [greensleeves.prog], []) else
+  if name == "ode_to_joy" then engine.analyze_piece(ode.key, ode.pc, [ode.phrase_a, ode.phrase_b, ode.phrase_c], [ode.prog], []) else
+  if name == "prelude_c_major" then engine.analyze_piece(prelude.key, prelude.pc, [prelude.top_notes_melody], [prelude.prog], []) else
+  if name == "scarborough_fair" then engine.analyze_piece(scarborough.key, scarborough.pc, [scarborough.phrase_a, scarborough.phrase_b], [scarborough.prog], []) else
+  null
+}
+
+fn shared_motive_count(a, b) {
+  let digests_a = list.dedupe(list.map(a.motives.items, fn(m) { m.digest })) in
+  let digests_b = list.dedupe(list.map(b.motives.items, fn(m) { m.digest })) in
+  list.len(list.filter(digests_a, fn(d) { list.any(digests_b, fn(x) { x == d }) }))
+}
+
+fn format_result(name_a, name_b, sim, shared) {
+  str.concat([
+    name_a, " vs ", name_b, "\n",
+    "  shared motives: ", str.from(shared), "\n",
+    "  cadence similarity: ", str.from(sim.cadence), "\n",
+    "  style similarity: ", str.from(sim.style), "\n",
+    "  overall similarity: ", str.from(sim.total)
+  ])
+}
+
+let args = cli.args()
+let result = if list.len(args) < 2 then "usage: compare <piece-a> <piece-b>" else
+  let analysis_a = analysis_for(args[0]) in
+  let analysis_b = analysis_for(args[1]) in
+  if analysis_a == null then str.concat(["unknown piece: ", args[0]]) else
+  if analysis_b == null then str.concat(["unknown piece: ", args[1]]) else
+  let sim = compare_cli.run(analysis_a, analysis_b) in
+  let shared = shared_motive_count(analysis_a, analysis_b) in
+  format_result(args[0], args[1], sim, shared)
+
+result
