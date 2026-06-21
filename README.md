@@ -72,7 +72,7 @@ Layers 6, 7, and 8 have been expanded using a red-test-first discipline:
 
 Above the tower sits a full analysis and reporting pipeline that consumes certified layer output without inventing new lower-layer truth -- the architecture is Tower -> Analysis -> Query -> Corpus -> Compare -> Export -> CLI:
 
-- Analysis Engine (src/analysis/): motive extraction and repetition detection, cadence classification derived from certified chord/scale data (not caller-supplied labels), and style fingerprinting across rhythm, contour, cadence, and harmonic function
+- Analysis Engine (src/analysis/): motive extraction and repetition detection (both exact-pitch and transposition-invariant, the latter comparing interval-class and duration-pattern sequences so a melody repeated in a different key is still recognized), cadence classification derived from certified chord/scale data (not caller-supplied labels), and style fingerprinting across rhythm, contour, cadence, and harmonic function
 - Query Engine (src/query/search.fard): reads only the certified output of analysis.engine.analyze_piece -- it never re-analyzes the tower directly
 - Corpus (src/corpus/): certified collections of pieces with their analyses, deterministic indices by title and by digest, corpus-level lookup
 - Compare (src/compare/): style, motive, and cadence similarity between two analyses; ranks a piece against a whole corpus
@@ -96,9 +96,13 @@ Every piece's form, terminal cadence, and motivic repetition have been verified 
 ```sh
 ./bin/mtif analyze bach_minuet_g
 ./bin/mtif compare greensleeves scarborough_fair
+./bin/mtif query repeated-motives bach_minuet_g
+./bin/mtif corpus rank greensleeves
 ```
 
 No JSON, no fardrun flags -- bin/mtif wraps fardrun run --program ... --out ... -- under the hood and prints the result directly. Available corpus pieces: twinkle, bach_minuet_g, amazing_grace, greensleeves, ode_to_joy, prelude_c_major, scarborough_fair.
+
+Commands: analyze <piece>; compare <piece-a> <piece-b>; query <cadences|motives-in-section|repeated-motives|style-value> <piece> [args]; corpus <list|rank> [piece].
 
 ## Run
 
@@ -124,6 +128,7 @@ fardrun test --program tests/test_corpus_prelude_c_major.fard
 fardrun test --program tests/test_corpus_scarborough_fair.fard
 fardrun test --program tests/test_export_markdown.fard
 fardrun test --program tests/test_compare_corpus_ranking.fard
+fardrun test --program tests/test_transposition_invariant_motives.fard
 ```
 
 Run a program and capture its digest, trace, and module graph:
@@ -138,6 +143,3 @@ This writes result.json, digests.json, trace.ndjson, and module_graph.json to th
 
 A higher layer never invents lower-layer truth. It only commits to certified objects already validated beneath it.
 
-## Testing discipline
-
-New layer behavior is specified as a failing test suite before it is implemented. tests/test_<layer>.fard defines the contract; src/layers/<layer>.fard is then built incrementally until every test passes. tests/diagnostics/ holds a separate audit suite that probes the system's meta-properties -- determinism across reruns, interval inversion correctness, validation reachability on malformed input, and honesty of tradition/temperament labeling -- rather than layer-specific musical behavior.
