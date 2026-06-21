@@ -1,95 +1,96 @@
 # Music Theory in FARD
 
-A deterministic, cryptographically-verifiable Musical Theory Tower written in FARD.
+A music analysis system where every claim it makes is backed by a cryptographic chain of evidence, not a black-box judgment.
 
-The project models eight certified layers:
+## What this is
 
-1. Note
-2. Interval
-3. Chord
-4. Scale / Mode
-5. Rhythm
-6. Melody / Phrase
-7. Harmonic Progression
-8. Piece / Movement
+Most music theory software (Music21, Humdrum, MuseScore plugins) analyzes a piece and hands you an answer: this is a V chord, this is an authentic cadence. You have to trust the tool.
 
-Every constructed object has:
+This project is built differently. Every musical object -- a note, an interval, a chord, a scale, a rhythm, a melody, a chord progression, a whole piece -- is constructed through a validator that rejects malformed input, then certified: hashed (SHA-256) into a unique identity that depends on its own content plus the certified identity of everything it was built from. A chord's identity depends on the notes it contains; a melody's identity depends on its notes, its scale, and its rhythm; a piece's identity depends on every melody, chord progression, and rhythm inside it.
 
-- a formal schema name and version
-- deterministic validation
-- canonical JSON and bytes
-- SHA-256 identity
-- replayable trace records
-- dependency digests for lower-layer provenance
+That chain is called the tower. It has eight layers, each one built only out of certified objects from the layer below:
 
-The implementation is intentionally data-first. Each layer exposes constructors, validators, canonical encoders, digest functions, certificates, and inventories. No generated object is accepted without validation.
+1. Note -- pitch, octave, frequency, MIDI number
+2. Interval -- the distance and relationship between two notes
+3. Chord -- built from notes; quality, voicing, inversion
+4. Scale / Mode -- built from notes; Major, Dorian, Phrygian, and others
+5. Rhythm -- duration, meter, syncopation (independent of pitch)
+6. Melody / Phrase -- built from notes, a scale, and a rhythm; contour, motive windows
+7. Harmonic Progression -- built from chords and a scale; Roman numeral analysis, cadences
+8. Piece / Movement -- built from melodies, progressions, and rhythms; sections, form
+
+The rule that makes this matter: a higher layer can never invent a fact about a lower layer. A progression cannot claim a chord is 'V' because someone typed that label in -- it has to derive 'V' from the chord's actual root note and quality, the same way every time, or the claim is rejected. This was tested directly: an earlier version of the analysis code classified cadences from a caller-supplied label string instead of the certified chord data, and was rewritten once the gap was found (see Status below).
+
+## What it actually produces
+
+On top of the tower sits a pipeline that turns certified objects into answers a student or professor can read, without ever bypassing the tower to get there:
+
+Tower -> Analysis -> Query -> Corpus -> Compare -> Export -> CLI
+
+- **Analysis** finds motives (repeated melodic cells), cadences, and a style fingerprint (histograms of rhythm, contour, cadence type, harmonic function), all derived from certified data
+- **Query** answers specific questions against one piece's analysis (how many authentic cadences, what motives repeat) without re-deriving anything
+- **Corpus** holds a set of certified pieces together with their analyses
+- **Compare** measures how similar two pieces are -- separately by style, by motive, and by cadence pattern, plus a combined score
+- **Export** turns an analysis into a plain-English summary or a structured report
+- **CLI** (./bin/mtif) is the door into all of this from a terminal, no code required
+
+## See it work
+
+Seven real pieces are certified in corpus/: Twinkle Twinkle Little Star, the opening of Bach's Minuet in G (BWV Anh. 114, actually composed by Christian Petzold), Amazing Grace, Greensleeves, Ode to Joy, the opening of Bach's Prelude in C Major (BWV 846), and Scarborough Fair.
+
+Ask which piece in the corpus is most similar to Greensleeves:
+
+```sh
+$ ./bin/mtif corpus rank greensleeves
+Scarborough Fair: 0.747354117798217
+Amazing Grace: 0.23566020467361035
+Ode to Joy: 0.22561031454106298
+Minuet in G (BWV Anh. 114, opening): 0.22189494283350905
+Prelude in C Major (BWV 846, opening 8 measures): 0.20464598075816112
+Twinkle Twinkle Little Star: 0.17230916487442507
+```
+
+Scarborough Fair wins by more than 3x the next closest piece. That is not a coincidence and not a hardcoded rule -- Greensleeves and Scarborough Fair are both in A Dorian and both built on the same i-VII-i chord motion. The system found that on its own by comparing certified harmonic and rhythmic data between the two pieces; nothing in the code says 'modal folk songs are similar.'
+
+Compare two pieces with very little in common:
+
+```sh
+$ ./bin/mtif compare twinkle prelude_c_major
+twinkle vs prelude_c_major
+  shared motives: 0
+  cadence similarity: 0.6666666666666666
+  style similarity: 0.8904159429330013
+  overall similarity: 0.5190275365332226
+```
+
+Zero shared motives is itself a finding, not a gap: Twinkle's melody and the Prelude's arpeggio-derived top line genuinely do not share a melodic cell, and the system says so plainly instead of forcing a similarity score.
+
+## How similarity actually works
+
+Motive matching happens two ways, and both are real, tested, separately exposed measures:
+
+- **Exact-pitch matching**: a 3-note window of notes and durations is hashed as-is. Two pieces only match if the identical pitches and durations recur.
+- **Transposition-invariant matching**: the same window is hashed as a sequence of semitone intervals plus a duration pattern, with the starting pitch thrown away. Two pieces match if they share a melodic shape, even in different keys.
+
+Proof this distinction is real, not just two names for the same thing: a melody transposed up a whole step scores 1.0 on the transposition-invariant measure and 0.0 on the exact-pitch measure, every time. That comparison is a permanent test (tests/test_transposition_invariant_motives.fard), not a one-off claim.
 
 ## Layout
 
 ```text
-src/core/canon.fard          canonical JSON/bytes/hash/cert helpers
-src/core/validate.fard       shared result and validation helpers
-src/layers/note.fard         Layer 1 -- pitch, frequency, register, transpose
-src/layers/interval.fard     Layer 2 -- quality, consonance, inversion
-src/layers/chord.fard        Layer 3 -- qualities, voicings, inversions
-src/layers/scale.fard        Layer 4 -- modes, traditions, temperament labeling
-src/layers/rhythm.fard       Layer 5 -- duration, meter, syncopation
-src/layers/melody.fard       Layer 6 -- note events, contour, motive windows, interval chains
-src/layers/progression.fard  Layer 7 -- Roman numeral analysis, cadence detection, secondary dominants
-src/layers/piece.fard        Layer 8 -- sections, instrumentation, form analysis
-src/tower.fard               full digest tower and exports
-src/analysis/engine.fard     unified analysis engine -- motive, cadence, and style analysis
-src/analysis/motives.fard    motive window extraction, repetition detection, section mapping
-src/analysis/cadences.fard   cadence classification from certified chord data
-src/analysis/style.fard      rhythm/contour/cadence/harmony histograms, style fingerprinting
-src/query/search.fard        query engine -- reads only certified analysis output
-src/corpus/corpus.fard       certified collections of pieces
-src/corpus/index.fard        deterministic corpus indices (by title, by digest)
-src/corpus/query.fard        corpus-level lookup
-src/compare/similarity.fard  style/motive/cadence similarity between two analyses
-src/compare/corpus_match.fard rank a piece against a corpus
-src/export/report.fard       structured analysis report (key, cadence, motives, form)
-src/export/json.fard         canonical JSON export payloads
-src/export/markdown.fard     student and professor-facing markdown summaries
-src/cli/analyze.fard         analyze one piece end to end
-src/cli/query.fard           ask questions over analysis and corpus
-src/cli/compare.fard         compare two pieces
-src/cli/corpus.fard          inspect a corpus
-corpus/*.fard                certified real-repertoire pieces (7 works spanning folk, Baroque, hymn, modal, and Classical traditions)
-tests/test_*.fard            layer-spec and tower-behavior tests
-tests/diagnostics/diag_*.fard  meta-property audit probes (determinism, inversion sanity, validation bypass resistance, labeling honesty)
+src/core/         canonical JSON/bytes/hashing, shared validation helpers
+src/layers/       the 8-layer tower (note, interval, chord, scale, rhythm, melody, progression, piece)
+src/tower.fard    full digest tower and exports
+src/analysis/     motive, cadence, and style analysis -- reads only certified tower data
+src/query/        question-answering over one piece's analysis
+src/corpus/       certified collections of pieces, with indices
+src/compare/      similarity between two analyses, ranking against a corpus
+src/export/       structured reports and plain-English summaries
+src/cli/          dispatchers invoked by bin/mtif
+corpus/           7 certified real-repertoire pieces
+bin/mtif          shell wrapper around fardrun -- the actual command-line tool
+tests/            tests for every layer and every analysis claim
+tests/diagnostics/  audit probes for the system itself: determinism, validation bypass resistance, labeling honesty
 ```
-
-## Status
-
-All eight layers of the Musical Theory Tower are implemented.
-
-Layers 6, 7, and 8 have been expanded using a red-test-first discipline:
-
-- Layer 6 (Melody): certified note events with deterministic onsets, contour classification, motive window extraction, interval chains between consecutive notes
-- Layer 7 (Progression): Roman numeral derivation from scale-degree position, cadence classification (authentic, plagal, half, deceptive), secondary dominant detection
-- Layer 8 (Piece): certified sections, timeline construction, overlap detection, material-reference validation, form fingerprints, deterministic form digests
-
-Above the tower sits a full analysis and reporting pipeline that consumes certified layer output without inventing new lower-layer truth -- the architecture is Tower -> Analysis -> Query -> Corpus -> Compare -> Export -> CLI:
-
-- Analysis Engine (src/analysis/): motive extraction and repetition detection (both exact-pitch and transposition-invariant, the latter comparing interval-class and duration-pattern sequences so a melody repeated in a different key is still recognized), cadence classification derived from certified chord/scale data (not caller-supplied labels), and style fingerprinting across rhythm, contour, cadence, and harmonic function
-- Query Engine (src/query/search.fard): reads only the certified output of analysis.engine.analyze_piece -- it never re-analyzes the tower directly
-- Corpus (src/corpus/): certified collections of pieces with their analyses, deterministic indices by title and by digest, corpus-level lookup
-- Compare (src/compare/): style, motive, and cadence similarity between two analyses; ranks a piece against a whole corpus
-- Export (src/export/): structured analysis reports, canonical JSON payloads, and student/professor-facing markdown summaries (key, terminal cadence, form, motive breakdown)
-- CLI (src/cli/): thin orchestration over the stack -- analyze a piece end to end, query analysis or corpus data, compare two pieces, inspect a corpus
-
-A real-repertoire corpus of 7 works lives under corpus/, spanning folk, Baroque, hymn, modal/Renaissance, and Classical traditions, with binary, ternary, and through-composed forms:
-
-- Twinkle Twinkle Little Star (folk, binary) -- no exact-pitch motivic repetition, since its phrases vary pitch rather than repeating literally
-- Minuet in G, BWV Anh. 114, opening (Baroque, binary; commonly attributed to Bach, actually by Christian Petzold) -- a literal G-B-A-G cell recurs across both A and B sections
-- Amazing Grace (hymn, binary) -- ends on a plagal cadence, the classic hymn "Amen" quality
-- Greensleeves (modal/Renaissance, binary, A Dorian) -- first modal piece in the corpus; exposed and fixed a Roman-numeral casing bug where a Major-quality chord on a normally-minor scale degree was rendered lowercase
-- Ode to Joy (Classical, ternary A-B-A) -- first non-binary form in the corpus
-- Prelude in C Major, BWV 846, opening (Baroque, through-composed) -- harmonic-density stress test with 8 distinct chords in one section, including a genuine secondary dominant (V7/V) correctly detected
-- Scarborough Fair (ballad, binary, A Dorian) -- second modal piece; exposed and fixed an octave-mismatch authoring bug where a chord root didn't match the scale's actual pitch, causing an out-of-bounds crash in degree lookup
-
-Every piece's form, terminal cadence, and motivic repetition have been verified against the actual music. The corpus also demonstrates genuine cross-piece musicological reasoning: ranking Greensleeves against the other six pieces by total similarity (style + motive + cadence) correctly puts Scarborough Fair first by a wide margin (0.75 vs. 0.24 for the next closest), with a perfect 1.0 cadence-similarity score -- both pieces share identical Dorian i-VII-i cadential motion, discovered purely from certified structural analysis with no hardcoded rule about modal similarity.
 
 ## Quickstart
 
@@ -100,46 +101,30 @@ Every piece's form, terminal cadence, and motivic repetition have been verified 
 ./bin/mtif corpus rank greensleeves
 ```
 
-No JSON, no fardrun flags -- bin/mtif wraps fardrun run --program ... --out ... -- under the hood and prints the result directly. Available corpus pieces: twinkle, bach_minuet_g, amazing_grace, greensleeves, ode_to_joy, prelude_c_major, scarborough_fair.
+Available pieces: twinkle, bach_minuet_g, amazing_grace, greensleeves, ode_to_joy, prelude_c_major, scarborough_fair.
 
 Commands: analyze <piece>; compare <piece-a> <piece-b>; query <cadences|motives-in-section|repeated-motives|style-value> <piece> [args]; corpus <list|rank> [piece].
 
-## Run
+## Status
 
-From this directory.
-
-Run the test suite (pass/fail per assertion):
+Every layer of the tower, the full analysis pipeline, and all 7 corpus pieces pass their tests as of this writing. Run the full suite yourself:
 
 ```sh
-fardrun test --program tests/test_tower.fard
-fardrun test --program tests/test_negative.fard
-fardrun test --program tests/test_melody.fard
-fardrun test --program tests/test_progression.fard
-fardrun test --program tests/test_piece.fard
-fardrun test --program tests/test_analysis_engine.fard
-fardrun test --program tests/test_query_search.fard
-fardrun test --program tests/test_useful_surface.fard
-fardrun test --program tests/test_corpus_twinkle.fard
-fardrun test --program tests/test_corpus_bach_minuet_g.fard
-fardrun test --program tests/test_corpus_amazing_grace.fard
-fardrun test --program tests/test_corpus_greensleeves.fard
-fardrun test --program tests/test_corpus_ode_to_joy.fard
-fardrun test --program tests/test_corpus_prelude_c_major.fard
-fardrun test --program tests/test_corpus_scarborough_fair.fard
-fardrun test --program tests/test_export_markdown.fard
-fardrun test --program tests/test_compare_corpus_ranking.fard
-fardrun test --program tests/test_transposition_invariant_motives.fard
+for f in tests/*.fard; do fardrun test --program "$f"; done
 ```
 
-Run a program and capture its digest, trace, and module graph:
+Two real bugs were found and fixed by testing against actual repertoire rather than synthetic examples:
+
+- A Roman-numeral case bug: a Major-quality chord on a scale degree that is normally minor or diminished (e.g. the VII chord in a Dorian-mode piece) was rendered in lowercase. Found while certifying Greensleeves.
+- An octave-mismatch authoring bug: a chord was built on the wrong octave of the correct pitch class, causing its root to be absent from its own scale's certified note list and crashing the analysis with an out-of-bounds error. Found while certifying Scarborough Fair.
+
+Both fixes are permanent regression tests, not just commit messages.
+
+## Run a program and inspect its provenance
 
 ```sh
 fardrun run --program tests/test_tower.fard --out out/music_theory_tower
 ```
 
-This writes result.json, digests.json, trace.ndjson, and module_graph.json to the output directory. digests.json records the SHA-256 of every output file plus the runtime version and stdlib root digest, so a run's provenance can be independently verified with fardrun verify --out <dir>.
-
-## Design invariant
-
-A higher layer never invents lower-layer truth. It only commits to certified objects already validated beneath it.
+This writes result.json, digests.json, trace.ndjson, and module_graph.json to the output directory. digests.json records the SHA-256 of every output file plus the runtime version and stdlib root digest, so a run's provenance can be independently re-verified with fardrun verify --out <dir>.
 
