@@ -14,7 +14,7 @@ let rules_name = "MelodyPhraseValidationRules"
 fn signed_step(a, b) { b.midi_note - a.midi_note }
 fn contour(notes) { list.map(list.range(1, list.len(notes)), fn(i) { let d = signed_step(notes[i - 1], notes[i]) in if d > 0 then "up" else if d < 0 then "down" else "same" }) }
 fn range_semitones(notes) { let mids = list.map(notes, fn(n) { n.midi_note }) in list.last(list.sort_int(mids)) - list.head(list.sort_int(mids)) }
-fn event(n, d) { { note: n.name, note_digest: note.digest(n), duration: d, duration_digest: canon.digest_value(d) } }
+fn event(n, d) { { note: n.name, note_digest: note.digest(n), pitch: n, duration: d, duration_digest: canon.digest_value(d) } }
 
 fn note_event(n, d, onset) { { note: n.name, note_digest: note.digest(n), pitch: n, duration: d, duration_digest: canon.digest_value(d), onset: onset } }
 

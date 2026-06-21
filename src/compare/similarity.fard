@@ -36,6 +36,17 @@ fn motive_similarity(a, b) {
   cast.float(list.len(shared)) / cast.float(union_size)
 }
 
+fn interval_class_digest_set(analysis) { list.dedupe(list.map(analysis.motives.items, fn(m) { m.interval_class_digest })) }
+
+fn transposition_invariant_motive_similarity(a, b) {
+  let set_a = interval_class_digest_set(a) in
+  let set_b = interval_class_digest_set(b) in
+  let union_size = list.len(list.dedupe(list.concat([set_a, set_b]))) in
+  if union_size == 0 then 1.0 else
+  let shared = list.filter(set_a, fn(d) { list.any(set_b, fn(x) { x == d }) }) in
+  cast.float(list.len(shared)) / cast.float(union_size)
+}
+
 fn cadence_kind_set(analysis) { list.dedupe(list.map(analysis.cadences.items, fn(c) { c.kind })) }
 
 fn cadence_similarity(a, b) {
@@ -54,4 +65,4 @@ fn total_similarity(a, b) {
   { style: s, motive: m, cadence: c, total: (s + m + c) / 3.0 }
 }
 
-export { style_similarity, motive_similarity, cadence_similarity, total_similarity, histogram_cosine }
+export { style_similarity, motive_similarity, transposition_invariant_motive_similarity, cadence_similarity, total_similarity, histogram_cosine }

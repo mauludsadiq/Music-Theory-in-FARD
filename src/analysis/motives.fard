@@ -15,13 +15,31 @@ fn window_digest(events) {
   }))
 }
 
+fn interval_class_sequence(events) {
+  list.map(list.range(1, list.len(events)), fn(i) {
+    events[i].pitch.midi_note - events[i - 1].pitch.midi_note
+  })
+}
+
+fn duration_ratio_sequence(events) {
+  list.map(events, fn(e) { e.duration.numerator })
+}
+
+fn interval_class_digest(events) {
+  canon.digest_value({
+    intervals: interval_class_sequence(events),
+    duration_pattern: duration_ratio_sequence(events)
+  })
+}
+
 fn make_motive(melody_index, start_index, events) {
   {
     melody_index: melody_index,
     start_index: start_index,
     event_count: list.len(events),
     events: events,
-    digest: window_digest(events)
+    digest: window_digest(events),
+    interval_class_digest: interval_class_digest(events)
   }
 }
 
@@ -99,5 +117,6 @@ export {
   collect_motives,
   repeated_motives,
   section_motive_map,
-  motive_density
+  motive_density,
+  interval_class_digest
 }

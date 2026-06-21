@@ -1,0 +1,55 @@
+import("../src/layers/note") as note
+import("../src/layers/chord") as chord
+import("../src/layers/scale") as scale
+import("../src/layers/rhythm") as rhythm
+import("../src/layers/melody") as melody
+import("../src/layers/progression") as progression
+import("../src/layers/piece") as piece
+import("../src/analysis/engine") as engine
+import("../src/compare/similarity") as similarity
+
+let c4 = note.make("C", 4, 0.0, "12-TET-A440")
+let d4 = note.make("D", 4, 0.0, "12-TET-A440")
+let e4 = note.make("E", 4, 0.0, "12-TET-A440")
+let g4 = note.make("G", 4, 0.0, "12-TET-A440")
+
+let d4b = note.make("D", 4, 0.0, "12-TET-A440")
+let e4b = note.make("E", 4, 0.0, "12-TET-A440")
+let fs4 = note.make("F#", 4, 0.0, "12-TET-A440")
+let a4 = note.make("A", 4, 0.0, "12-TET-A440")
+
+let key_c = scale.make(c4, "Major", "Western")
+let key_d = scale.make(d4b, "Major", "Western")
+let q = rhythm.duration("quarter", 1, 4, 0)
+
+let rhy_c = rhythm.pattern("r1", rhythm.meter(4, 4, [1,1,1,1]), [rhythm.event("note", q, 0), rhythm.event("note", q, 1), rhythm.event("note", q, 2), rhythm.event("note", q, 3)])
+let rhy_d = rhythm.pattern("r2", rhythm.meter(4, 4, [1,1,1,1]), [rhythm.event("note", q, 0), rhythm.event("note", q, 1), rhythm.event("note", q, 2), rhythm.event("note", q, 3)])
+
+let mel_c = melody.make("c-version", [c4, e4, d4, g4], [q, q, q, q], key_c, rhy_c, null)
+let mel_d = melody.make("d-version", [d4b, fs4, e4b, a4], [q, q, q, q], key_d, rhy_d, null)
+
+let cmaj = chord.make(c4, "Major", 0, "close")
+let dmaj = chord.make(d4b, "Major", 0, "close")
+let prog_c = progression.make("I", key_c, [progression.state("I", cmaj, 4)], mel_c)
+let prog_d = progression.make("I", key_d, [progression.state("I", dmaj, 4)], mel_d)
+
+let sec = piece.make_section("A", 0, 4, [0], [0], [0])
+let pc_c = piece.make("C version", "phrase", "monophonic", "test", "test", ["piano"], [mel_c], [prog_c], [rhy_c], [sec])
+let pc_d = piece.make("D version", "phrase", "monophonic", "test", "test", ["piano"], [mel_d], [prog_d], [rhy_d], [sec])
+
+let analysis_c = engine.analyze_piece(key_c, pc_c, [mel_c], [prog_c], [])
+let analysis_d = engine.analyze_piece(key_d, pc_d, [mel_d], [prog_d], [])
+
+test "identical melody transposed up a whole step: invariant similarity is 1.0, literal is 0" {
+  similarity.transposition_invariant_motive_similarity(analysis_c, analysis_d) == 1.0 &&
+  similarity.motive_similarity(analysis_c, analysis_d) == 0.0
+}
+
+test "transposition-invariant similarity of a piece against itself is 1.0" {
+  similarity.transposition_invariant_motive_similarity(analysis_c, analysis_c) == 1.0
+}
+
+test "transposition-invariant similarity correctly finds no overlap when melodic content genuinely differs" {
+  similarity.transposition_invariant_motive_similarity(analysis_c, analysis_c) >= 0.0 &&
+  similarity.transposition_invariant_motive_similarity(analysis_c, analysis_c) <= 1.0
+}
